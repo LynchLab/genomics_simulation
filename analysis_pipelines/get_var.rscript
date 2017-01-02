@@ -1,0 +1,25 @@
+G<-read.csv("rel-trim", sep="	")
+z<-read.csv("pedigree.txt", sep="	")
+zdiff<-c()
+zmean<-mean(z$z[z$t==tail(z$t, n=1)])
+γ<-c()
+for (i in 1:length(G$f_X)){
+	zdiff<-c(zdiff, (z$z[z$ind==G$X.SAMPLE_X[i]]-zmean)*(z$z[z$ind==G$SAMPLE_Y[i]]-zmean) )
+	γ<-c(γ, G$γ_XY[i]+G$γ_YX[i])	
+}
+G$zdiff<-zdiff
+G$γ<-γ
+z_short<-c()
+z_short$z<-z$z[z$t==tail(z$t, n=1)]
+z_short$ind<-z$ind[z$t==tail(z$t, n=1)]
+
+f<-mean(G$f_X[G$SAMPLE_X==z_short[1]$ind])
+for (i in 2:length(z_short$t) ){
+	f<-c(f, mean(G$f_Y[G$SAMLE_Y==z_short[i]$ind]) )
+}
+summary(lm(G$zdiff~G$θ_XY+G$γ+G$δ+G$Δ))
+summary(lm(G$zdiff~G$θ_XY+G$δ+G$Δ))
+summary(lm(G$zdiff~G$θ_XY+G$γ+G$Δ))
+summary(lm(G$zdiff~G$θ_XY+G$Δ))
+summary(lm(z_short~f)  )
+var(z$z[z$t==tail(z$t, n=1)])

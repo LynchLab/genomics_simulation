@@ -1,0 +1,15 @@
+#!/bin/bash
+
+./pedigree_sim 200 200 200 1 1 5 190 100 > out.fasta 2> out.var
+./simulate_seq
+
+rm -f pro
+rm -f map
+
+mapgd proview -H header.txt -n name-file.txt > pro
+mapgd allele -i pro | mapgd filter -p 6 > map 
+mapgd genotype -p pro -m map | mapgd relatedness > rel
+
+rm -f map
+rm -f pro
+

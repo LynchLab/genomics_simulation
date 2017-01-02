@@ -1,0 +1,37 @@
+
+t<-read.csv("outy3.csv", sep=" ", fill=TRUE, na.strings="NaN")
+
+pdf("figures.pdf")
+
+max_freq<-max(t$freq)
+
+t$freq<-(t$freq/max_freq)
+
+for (x in unique(t$run) ){
+	if(mean(abs(t$rho1[t$run==x]), na.rm=TRUE)>0.05){
+		plot(t$freq[t$run==x], t$rho2[t$run==x], ylim=c(-1, 1), xlab="freq", ylab="rho", pch=20, col=rgb(1,0,0,0.5) )
+		points(t$freq[t$run==x], t$rho1[t$run==x], ylim=c(-1, 1), xlab="freq", ylab="rho", pch=20, col=rgb(0,1,0,0.5) )
+		points(t$freq[t$run==x], t$rho3[t$run==x], ylim=c(-1, 1), xlab="freq", ylab="rho", pch=20, col=rgb(0,0,1,0.5) )
+	}
+}
+pdf("figures2.pdf")
+for (x in unique(t$run) ){
+	if(mean(abs(t$rho1[t$run==x]), na.rm=TRUE)>0.05){
+		plot((t$P[t$run==x]), t$OX[t$run==x]-t$EX[t$run==x], ylim=c(-0.05, 0.05), xlab="freq", ylab="rho", pch=20, col=rgb(1,0,0,0.5) )
+		points((t$P[t$run==x]), t$OY[t$run==x]-t$EY[t$run==x], ylim=c(-0.05, 0.05), xlab="freq", ylab="rho", pch=20, col=rgb(0,1,0,0.5) )
+	}
+}
+dev.off()
+pdf("MSE.pdf")
+dev1<-c()
+dev2<-c()
+dev3<-c()
+for (x in unique(t$run) ){
+	if(mean(abs(t$rho1[t$run==x]), na.rm=TRUE)>0.05){
+		dev1<-append(dev1, t$rho1[t$run==x & abs(t$P-0.5)>0.05]-mean(t$rho1[t$run==x], na.rm=TRUE))
+		dev2<-append(dev2, t$rho2[t$run==x & abs(t$P-0.5)>0.05]-mean(t$rho2[t$run==x], na.rm=TRUE))
+		dev3<-append(dev3, t$rho3[t$run==x & abs(t$P-0.5)>0.05]-mean(t$rho3[t$run==x], na.rm=TRUE))
+	}
+}
+boxplot(dev1, dev2, dev3, ylim=c(-0.5,0.5) )
+dev.off()

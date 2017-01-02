@@ -1,0 +1,3 @@
+@NAME:RELATEDNESS	VERSION:0.4.25	FORMAT:TEXT	CONCATENATED
+@SAMPLE_X	SAMPLE_Y	f_X	f_X_ll	f_Y	f_Y_ll	θ_XY	θ_ll	γ_XY	γ_XY_ll	γ_YX	γ_YX_ll	δ	δ_ll	Δ	Δ_ll	null_ll	fit
+@END_TABLE

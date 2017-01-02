@@ -1,0 +1,2 @@
+@HD	VN:0.4	SO:coordinate
+@SQ	SN:scaffold_1	LN:32
