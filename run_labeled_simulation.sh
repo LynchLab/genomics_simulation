@@ -4,14 +4,13 @@ NUMBER=250
 TIME=$((NUMBER))
 REF="reference.fa"
 COV=3
-SIZE=1000000
-SNPS=10000
+SIZE=100000
+SNPS=1000
 
 echo "simulating reference"
 python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
 python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/reference.fa
 
-exit
 echo "simulating population"
 cd sequences
 ../population_simulation/pedigree_sim $NUMBER $TIME $SNPS 1 0 > states.txt 2> var
@@ -29,8 +28,8 @@ do
 
 	echo $NAME
 
-	./sequencing_simulation/art_illumina -ss HS25 -qs -10 -qs2 -10 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
-	./sequencing_simulation/art_illumina -ss HS25 -qs -10 -qs2 -10 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
+	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
+	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
 
 	rm *.aln
 	rm *.sam
@@ -42,7 +41,6 @@ do
 
 	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($NUMBER*$TIME+10#$x)) > /dev/null 2> /dev/null
 	cd sequences
-	samtools index $NAME.sort.bam
 	samtools index $NAME.sort.rmdup.bam
 	cd ..
 done
