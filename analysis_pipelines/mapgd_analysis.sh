@@ -7,3 +7,7 @@ mapgd proview -H ../sequences/temp-header.txt -n ../sequences/name-file.txt -bs 
 mapgd allele -i ../analysis_files/pro.txt.gz -c 1 -g 5 | mapgd filter -q 0.001 -p 3 -g 5 | gzip - > ../analysis_files/mapgd_calls.txt.gz
 zcat ../analysis_files/mapgd_calls.txt.gz | tail -n +6 | sed '$d' >  ../analysis_files/mapgd_calls-trim.csv
 mapgd genotype -p ../analysis_files/pro.txt.gz -m ../analysis_files/mapgd_calls.txt.gz | mapgd relatedness > ../analysis_files/mapgd_relatedness.out
+mapgd genotype -p ../analysis_files/pro.txt.gz -m ../analysis_files/mapgd_calls.txt.gz | gzip - > genotype.gcf.gz
+date
+cat genotype.gcf.gz | gunzip - | mapgd relatedness > ../analysis_files/mapgd_relatedness.out
+date

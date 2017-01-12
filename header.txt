@@ -1,2 +1,2 @@
 @HD	VN:0.4	SO:coordinate
-@SQ	SN:scaffold_1	LN:20480000
+@SQ	SN:scaffold_1	LN:6553600

@@ -1,4 +1,4 @@
-t<-read.csv("../analysis_files/admixture.csv", sep=" ", fill=TRUE, na.strings="NaN")
+t<-read.csv("../analysis_files/admixture.csv", sep=" ")
 
 pdf("figure_3.pdf")
 
@@ -13,9 +13,8 @@ AXISSIZE<-1.5
 par(mar=c(5.1,4.7,4.1,2.1) )
 
 for (x in unique(t$run) ){
-	if(mean(abs(t$rho1[t$run==x]) )>0.05){
-		plot(t$freq[t$run==x], t$rho1[t$run==x],  cex.lab = LABSIZE, cex.axis = AXISSIZE, ylim=c(0.0, 0.5), xlab="p", ylab=expression(Theta), pch=20, col=rgb(1,0,0,0.5) )
-		points(t$freq[t$run==x], t$rho2[t$run==x], pch=20, col=rgb(0,1,0,0.5) )
+	if(mean(abs(t$rho1[t$run==x])  )>0.05){
+		plot(t$freq[t$run==x], t$rho1[t$run==x],  cex.lab = LABSIZE, cex.axis = AXISSIZE, ylim=c(-0.5, 0.5), xlab="p", ylab=expression(Theta), pch=20, col=rgb(1,0,0,0.5) )
 		points(t$freq[t$run==x], t$rho3[t$run==x], pch=20, col=rgb(0,0,1,0.5) )
 	}
 }
@@ -24,8 +23,8 @@ dev.off()
 pdf("figure_4.pdf")
 par(mar=c(5.1,4.7,4.1,2.1) )
 for (x in unique(t$run) ){
-	if(mean(abs(t$rho1[t$run==x]) )>0.05){
-		plot((t$P[t$run==x]), t$OX[t$run==x]-t$EX[t$run==x],  cex.lab = LABSIZE, cex.axis = AXISSIZE, ylim=c(-0.05, 0.05), xlab="p", ylab=expression(paste(Delta, "p") ), pch=20, col=rgb(1,0,0,0.5) )
+	if(mean(abs(t$rho1[t$run==x])  )>0.05){
+		plot((t$P[t$run==x]), t$OX[t$run==x]-t$EX[t$run==x],  cex.lab = LABSIZE, cex.axis = AXISSIZE, ylim=c(-0.15, 0.15), xlab="p", ylab=expression(paste(Delta, "p") ), pch=20, col=rgb(1,0,0,0.5) )
 		points((t$P[t$run==x]), t$OY[t$run==x]-t$EY[t$run==x], pch=20, col=rgb(0,1,0,0.5) )
 
 	}
@@ -38,12 +37,11 @@ dev1<-c()
 dev2<-c()
 dev3<-c()
 for (x in unique(t$run) ){
-	if(mean(abs(t$rho1[t$run==x]) )>0.05){
-		dev1<-append(dev1, t$rho1[t$run==x & abs(t$P-0.5)<0.15]-mean(t$rho1[t$run==x]))
-		dev2<-append(dev2, t$rho2[t$run==x & abs(t$P-0.5)<0.15]-mean(t$rho2[t$run==x]))
-		dev3<-append(dev3, t$rho3[t$run==x & abs(t$P-0.5)<0.15]-mean(t$rho3[t$run==x]))
+	if(mean(abs(t$rho1[t$run==x]) ) >0.05){
+		dev1<-append(dev1, t$rho1[t$run==x & abs(t$P-0.5)<0.05]-mean(t$rho1[t$run==x] ))
+		dev2<-append(dev2, t$rho2[t$run==x & abs(t$P-0.5)<0.05]-mean(t$rho2[t$run==x] ))
+		dev3<-append(dev3, t$rho3[t$run==x & abs(t$P-0.5)<0.05]-mean(t$rho3[t$run==x] ))
 	}
 }
 boxplot(dev1, dev2, dev3, ylim=c(-0.05,0.05), names = c("None","Linear","Emperical"), cex.lab = LABSIZE, cex.axis = AXISSIZE)
 dev.off()
-

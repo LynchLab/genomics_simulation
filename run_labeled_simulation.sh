@@ -1,11 +1,11 @@
 #!/bin/bash
 
-NUMBER=250
+NUMBER=50
 TIME=$((NUMBER))
 REF="reference.fa"
 COV=3
-SIZE=100000
-SNPS=1000
+SIZE=50000 #bwa craps out at snp densities gt ~1:150
+SNPS=500
 
 echo "simulating reference"
 python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
@@ -31,20 +31,34 @@ do
 	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
 	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
 
-	rm *.aln
-	rm *.sam
-
 	cat temp.01.fq > ./sequences/temp.1.fq
 	cat temp.11.fq >> ./sequences/temp.1.fq
 	cat temp.02.fq > ./sequences/temp.2.fq
 	cat temp.12.fq >> ./sequences/temp.2.fq
 
 	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($NUMBER*$TIME+10#$x)) > /dev/null 2> /dev/null
+#	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($NUMBER*$TIME+10#$x)) 
+
+	rm temp.01.fq
+	rm temp.11.fq
+	rm temp.02.fq
+	rm temp.12.fq
+
+	rm temp.01.aln
+	rm temp.11.aln
+	rm temp.02.aln
+	rm temp.12.aln
+
+	rm temp.0.sam
+	rm temp.1.sam
+
+#	rm seqeuences/temp.1.fq
+#	rm seqeuences/temp.2.fq
+
 	cd sequences
 	samtools index $NAME.sort.rmdup.bam
 	cd ..
 done
-rm temp*.fq
 
 ls sequences/ | grep seq.*.sort.rmdup.bam$ > sequences/bam_list.txt
 
@@ -52,6 +66,7 @@ cd analysis_pipelines
 
 #./mapgd_analysis_newton.sh $REF
 ./mapgd_analysis.sh $REF
+exit
 ./bcftools_analysis.sh $REF
 ./angsd_analysis.sh $REF
 ./gatk_analysis.sh $REF

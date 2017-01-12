@@ -6,10 +6,13 @@
 #include <time.h>
 #include <cstring>
 #include <omp.h>
+#include <iomanip>
 
 #define REC
+#define MUT
 
 #define LOCI	32
+
 
 void random_mating(uint32_t *P1,  uint32_t *P2, const size_t &size)
 {
@@ -54,20 +57,15 @@ void random_consang(uint32_t *P1,  uint32_t *P2, const size_t &size)
 	//Place each number into a vector once. Randomize the vector, split into two halves, mate each pair twice.
 	std::vector<uint32_t> all(size);
 	std::iota(all.begin(), all.end(), 0);
-	std::random_shuffle(all.begin(), all.end() );
+//	std::random_shuffle(all.begin(), all.end() );
 	
-	size_t oh=size/2;
-
-	for (size_t x=0; x<oh; ++x)
+	for (size_t x=0; x<size-1; ++x)
 	{
 		P1[x]=all[x];
-		P2[x]=all[x+oh];	
+		P2[x]=all[x+1];	
 	}
-	for (size_t x=oh; x<size; ++x)
-	{
-		P1[x]=all[x-oh];
-		P2[x]=all[x];
-	}
+	P1[size-1]=size-1;
+	P2[size-1]=0;
 }
 
 void print_head(std::ostream &out, const int &length)
@@ -101,6 +99,114 @@ void print_relatedness(std::ostream &out, const ..)
 }
 */
 
+class Gcounter {
+	private:
+	std::geometric_distribution<int> *geom;
+	std::mt19937 *mt;
+	int N;
+	public:
+	Gcounter(std::mt19937 &_mt, double rate)
+	{
+		mt=&_mt;
+		geom=new std::geometric_distribution<int> (rate);
+		N=(*geom)(*mt);
+	}
+	~Gcounter(void)
+	{
+		delete geom;
+	}	
+	bool draw(void){
+		//--N==0 ? return false : {N=(*geom)(*mt); return true;};
+		if (N--!=0) return false;
+		else {
+			N=(*geom)(*mt);
+//			std::cerr << "N:" << N << std::endl;
+			return true;
+		}
+//		return false;
+	}
+};
+
+void mutate (uint32_t *ind, std::uniform_int_distribution<int> &r32, std::uniform_int_distribution<int> &randN, std::poisson_distribution<int> &poisson, std::mt19937 &mt)
+{
+	const uint32_t MASK[LOCI]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
+				0x00000010,	0x00000020,	0x00000040,	0x00000080,
+				0x00000100,	0x00000200,	0x00000400, 	0x00000800,	
+				0x00001000, 	0x00002000, 	0x00004000, 	0x00008000,
+				0x00010000,	0x00020000,	0x00040000,	0x00080000,
+				0x00100000,	0x00200000,	0x00400000,	0x00800000,
+				0x01000000,	0x02000000,	0x04000000, 	0x08000000,	
+				0x10000000, 	0x20000000, 	0x40000000, 	0x80000000};
+
+	int mut_num=poisson(mt);
+//	std::cerr << "M:" << mut_num << std::endl;
+	for (size_t x=0; x<mut_num; ++x){
+		ind[randN(mt)]^=(MASK[r32(mt)]);
+	}
+}
+
+void
+recombine2 (uint32_t *recs, uint32_t *r_end, std::uniform_int_distribution<int> &r32, Gcounter &gcounter, std::mt19937 &mt)
+{
+	const uint32_t MASK[32]={0x00000001,	0x00000003,	0x00000007,	0x0000000f,
+				0x0000001f,	0x0000003f,	0x0000007f,	0x000000ff,
+				0x000001ff,	0x000003ff,	0x000007ff, 	0x00000fff,	
+				0x00001fff, 	0x00003fff, 	0x00007fff, 	0x0000ffff,
+				0x0001ffff,	0x0003ffff,	0x0007ffff,	0x000fffff,
+				0x001fffff,	0x003fffff,	0x007fffff,	0x00ffffff,
+				0x01ffffff,	0x03ffffff,	0x07ffffff, 	0x0fffffff,	
+				0x1fffffff, 	0x3fffffff, 	0x7fffffff, 	0xffffffff};
+
+/*	const uint32_t MASK[32]={0x7ffffff,	0x7fffffff,	0x7ffffffd,	0x7ffffff9,
+				0x7ffffff1,	0x7fffffe1,	0x7fffffc1,	0x7fffff81,
+				0x7fffff01,	0x7ffffe01,	0x7ffffc01, 	0x7ffff801,	
+				0x7ffff001, 	0x7fffe001, 	0x7fffc001, 	0x7fff8001,
+				0x7fff0001,	0x7ffe0001,	0x7ffc0001,	0x7ff80001,
+				0x7ff00001,	0x7fe00001,	0x7fc00001,	0x7f800001,
+				0x7f000001,	0x7e000001,	0x7c000001, 	0x78000001,	
+				0x70000001, 	0x60000001, 	0x40000001, 	0x00000001};
+*/
+
+	uint32_t *r=recs;
+	while (r!=r_end){
+		if( gcounter.draw() ) {
+			if (*r & 0x80000000) *r=(MASK[r32(mt)]);
+			else *r=~MASK[r32(mt)];
+		} else {
+			if (*r & 0x80000000) *r=0xFFFFFFFF;
+			else *r=0;
+		}
+		++r;
+	}
+}
+
+void
+recombine (uint32_t &r, std::uniform_int_distribution<int> &ri, std::mt19937 &mt)
+{
+	//Switch based on the value of the lowest bit
+	const uint32_t MASK[32]={0x00000001,	0x00000003,	0x00000007,	0x0000000f,
+					0x0000001f,	0x0000003f,	0x0000007f,	0x000000ff,
+					0x000001ff,	0x000003ff,	0x000007ff, 	0x00000fff,	
+					0x00001fff, 	0x00003fff, 	0x00007fff, 	0x0000ffff,
+					0x0001ffff,	0x0003ffff,	0x0007ffff,	0x000fffff,
+					0x001fffff,	0x003fffff,	0x007fffff,	0x00ffffff,
+					0x01ffffff,	0x03ffffff,	0x07ffffff, 	0x0fffffff,	
+					0x1fffffff, 	0x3fffffff, 	0x7fffffff, 	0xffffffff};
+	if (r & 0x80000000) r=~(MASK[ri(mt)]);
+	else r=MASK[ri(mt)];
+}
+
+void
+rand_rec(uint32_t &r, std::uniform_int_distribution<int> &r32, std::uniform_int_distribution<int> &r10, std::mt19937 &mt)
+{
+	if (!r10(mt)){
+		recombine(r, r32, mt);
+	} else {
+		if (r & 0x80000000) r=0xFFFFFFFF;
+		else r=0;	
+	}
+}
+
 class individual
 {
 private:
@@ -131,7 +237,7 @@ public:
 	};
 
 	void
-	update(std::mt19937 &mt, uint_fast32_t *Pstate[], uint_fast32_t *Ostate[], uint32_t x) {
+	update(std::mt19937 &mt, uint32_t *Pstate[], uint32_t *Ostate[], uint32_t x) {
 		uint_fast32_t r1 = mt();
 		uint_fast32_t r2 = mt();
 		*(Ostate[0]+x) = *(Pstate[0]+P1) & r1 | *(Pstate[1]+P1) & ~r1; 
@@ -139,7 +245,10 @@ public:
 	};
 
 	void
-	update2(const uint_fast32_t &r1, const uint_fast32_t &r2, uint_fast32_t *Pstate[], uint_fast32_t *Ostate[], uint32_t x) {
+	update2(uint32_t &r1, uint32_t &r2, uint32_t *Pstate[], uint32_t *Ostate[], uint32_t x, std::uniform_int_distribution<int> &r32, std::uniform_int_distribution<int>&r10, std::mt19937 &mt ){
+//		std::cerr << std::showbase << std::internal << std::setfill('0') << "(" << P1 << ", " << P2 << ")" << std::hex << *(Pstate[0]+P1) << ", " << *(Pstate[1]+P1) << ", " << r1 << '\t' << *(Pstate[0]+P2) << ", " << *(Pstate[1]+P2) << ", " << r2 << std::endl; 
+		//std::cerr << std::showbase << std::internal << std::setfill('0') << std::hex << *(Pstate[0]+P1) << ", " << *(Pstate[1]+P1) << ", (" << r1 << ")\t" << *(Pstate[0]+P2) << ", " << *(Pstate[1]+P2) << ", (" << r2 << ")" << std::endl; 
+//		std::cerr << std::showbase << std::internal << std::setfill('0') << std::hex << "(" << r1 << ")\t (" << r2 << ")" << std::endl; 
 		*(Ostate[0]+x) = *(Pstate[0]+P1) & r1 | *(Pstate[1]+P1) & ~r1; 
 		*(Ostate[1]+x) = *(Pstate[0]+P2) & r2 | *(Pstate[1]+P2) & ~r2;
 	}
@@ -149,44 +258,15 @@ public:
 uint32_t individual::ID=1;
 
 
-
-void
-recombine (uint_fast32_t &r, std::uniform_int_distribution<int> &ri, std::mt19937 &mt)
-{
-	//Switch based on the value of the lowest bit
-	const uint_fast32_t MASK[32]={0x00000001,	0x00000003,	0x00000007,	0x0000000F,
-					0x0000001F,	0x0000003F,	0x0000007F,	0x000000FF,
-					0x000001FF,	0x000003FF,	0x000007FF, 	0x00000FFF,	
-					0x00001FFF, 	0x00003FFF, 	0x00007FFF, 	0x0000FFFF,
-					0x0001FFFF,	0x0003FFFF,	0x0007FFFF,	0x000FFFFF,
-					0x001FFFFF,	0x003FFFFF,	0x007FFFFF,	0x00FFFFFF,
-					0x01FFFFFF,	0x03FFFFFF,	0x07FFFFFF, 	0x0FFFFFFF,	
-					0x1FFFFFFF, 	0x3FFFFFFF, 	0x7FFFFFFF, 	0xFFFFFFFF};
-	if (r & 0x00000001) r=~MASK[ri(mt)];
-	else r=MASK[ri(mt)];
-}
-
-void
-rand_rec(uint_fast32_t &r, std::uniform_int_distribution<int> &r32, std::uniform_int_distribution<int> &r10, std::mt19937 &mt)
-{
-	if (!r10(mt)){
-		recombine(r, r32, mt);
-	} else {
-		if (r & 0x00000001) r=0xFFFFFFFF;
-		else r=0;	
-	}
-}
-
 void 
-initR (uint_fast32_t ***Rand,const size_t & N, const size_t & t, std::mt19937 &mt)
+initR (uint32_t ***Rand,const size_t & N, const size_t & t, std::mt19937 &mt)
 {
-	uint_fast32_t *r1_ptr, *r2_ptr, *r1_end;
-	uint_fast32_t ***r_out=Rand;
-	uint_fast32_t ***rout_end=Rand+t;
+	uint32_t *r1_ptr, *r2_ptr, *r1_end;
+	uint32_t ***r_out=Rand;
+	uint32_t ***rout_end=Rand+t;
 	
 	std::uniform_int_distribution<int> r32(0,32);
-	std::uniform_int_distribution<int> r10(0,10);
-
+	std::uniform_int_distribution<int> r10(0,20);
 
 	while (r_out!=rout_end)
 	{
@@ -210,12 +290,12 @@ initR (uint_fast32_t ***Rand,const size_t & N, const size_t & t, std::mt19937 &m
 }
 /*These are all cribbed from Cockerham and Weir 1984.*/
 
-double get_freq(uint_fast32_t **Results, 
+double get_freq(uint32_t **Results, 
 	const size_t &generation_size,
 	const uint32_t &Z)
 {
 	double p=0;
-	const uint_fast32_t MASK[LOCI]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
+	const uint32_t MASK[LOCI]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
 					0x00000010,	0x00000020,	0x00000040,	0x00000080,
 					0x00000100,	0x00000200,	0x00000400, 	0x00000800,	
 					0x00001000, 	0x00002000, 	0x00004000, 	0x00008000,
@@ -232,7 +312,7 @@ double get_freq(uint_fast32_t **Results,
 }
 
 
-double get_genome_thingies(uint_fast32_t **ind, 
+double get_genome_thingies(uint32_t **ind, 
 	const size_t &generation_size, double a, double d)
 {
 
@@ -270,15 +350,15 @@ double get_genome_thingies(uint_fast32_t **ind,
 
 double
 inc(double &z, 
-	uint_fast32_t &P1, 
-	uint_fast32_t &P2,
+	uint32_t &P1, 
+	uint32_t &P2,
 	double a,
 	double d)
 {
 
 	double W[3]={-a, d, a};
 
-	const uint_fast32_t MASK[LOCI]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
+	const uint32_t MASK[LOCI]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
 					0x00000010,	0x00000020,	0x00000040,	0x00000080,
 					0x00000100,	0x00000200,	0x00000400, 	0x00000800,	
 					0x00001000, 	0x00002000, 	0x00004000, 	0x00008000,
@@ -307,7 +387,11 @@ make (individual *descendents[],
 //	for (size_t x=0; x<generation_size;*simulation_length; ++x)
 	for (size_t y=0; y<simulation_length; ++y)
 	{
-		random_sibs(P1, P2, generation_size);
+//		if { 
+//			random_sibs(P1, P2, generation_size);
+//			random_mating(P1, P2, generation_size);
+			random_consang(P1, P2, generation_size);
+//		}
 		for (size_t x=0; x<generation_size; ++x)
 		{
 			(*descendents)[y*generation_size+x].P1=P1[x];
@@ -362,6 +446,37 @@ make_subdivided (individual *descendents[],
 		}
 	}
 }
+
+void 
+make_change (individual *descendents[], 
+	const size_t &generation_size, 
+	const size_t &simulation_length,
+	const size_t &start,
+	const size_t &stop,
+	std::mt19937 &mt)
+{
+	std::uniform_int_distribution<int> ri(0,generation_size-1);
+	*descendents=new individual[generation_size*simulation_length];
+
+	uint32_t *P1=new uint32_t[generation_size], *P2= new uint32_t[generation_size];
+
+	for (size_t y=0; y<simulation_length; ++y)
+	{
+		if (start < y && y<stop) {
+			random_consang(P1, P2, generation_size);
+		} else {
+			random_mating(P1, P2, generation_size);
+		}
+		for (size_t x=0; x<generation_size; ++x)
+		{
+			(*descendents)[y*generation_size+x].P1=P1[x];
+			(*descendents)[y*generation_size+x].P2=P2[x];
+		}
+	}
+	delete P1;
+	delete P2;
+}
+
 void 
 print_ped(individual *descendents[],
 	const size_t &generation_size, 
@@ -381,7 +496,7 @@ print_ped(individual *descendents[],
 }
 
 void
-print_results4(std::ostream &out, const int &N, uint_fast32_t **Results)
+print_results4(std::ostream &out, const int &N, uint32_t **Results)
 { 
 	for (size_t b=0; b<32; ++b) {
 		for (size_t y=0; y<N; ++y){
@@ -403,10 +518,41 @@ print_results4(std::ostream &out, const int &N, uint_fast32_t **Results)
 		}
 		out << std::endl;
 	}
+//	out << "-------------------------------" << std::endl;
 }
 
+
+/*void
+print_results5(std::ostream &out, const int &N, uint_fast32_t **O, uint_fast32_t **P, uint_fast32_t **R)
+{ 
+	for (size_t b=0; b<32; ++b) {
+		for (size_t y=0; y<N; ++y){
+			std::bitset <32> O1(O[0][y]);
+			std::bitset <32> O2(O[1][y]);
+
+			std::bitset <32> P1(P[0][y]);
+			std::bitset <32> P2(P[1][y]);
+
+			std::bitset <32> R1(R[0][y]);
+			std::bitset <32> R2(R[1][y]);
+
+			R1[b] ? {p10b='|'; p11b=' ' } : {p10b=' '; p11b='|'};
+			R2[b] ? {p20b='|'; p21b=' ' } : {p20b=' '; p21b='|'};
+
+			P1[b] ? p10='0' : p10='1';
+			P1[b] ? p11='0' : p11='1';
+
+			P2[b] ? p20='0' : p20='1';
+			P2[b] ? p20='0' : p21='1';
+
+			out << '\t' << p10b << p10 << p10b << p11b << p11 << p11b << '\t' << p20b << p20 << p20b << p21b << p21 << p21b;
+		}
+		out << std::endl;
+	}
+}*/
+
 void
-print_results3(std::ostream &out, const int &k, const int &N, uint_fast32_t **Results)
+print_results3(std::ostream &out, const int &k, const int &N, uint32_t **Results)
 { 
 for (int K=0; K<k; ++K){
 	for (size_t b=0; b<32; ++b) {
@@ -433,7 +579,7 @@ for (int K=0; K<k; ++K){
 }
 
 void
-print_results2(std::ostream &out, const int &k, const int &N, uint_fast32_t **Results)
+print_results2(std::ostream &out, const int &k, const int &N, uint32_t **Results)
 { 
 for (int K=0; K<k; ++K){
 	for (size_t b=0; b<32; ++b) {
@@ -461,7 +607,7 @@ for (int K=0; K<k; ++K){
 }
 
 void 
-print_results(std::ostream &out, const int &k, const int &N, uint_fast32_t **Results)
+print_results(std::ostream &out, const int &k, const int &N, uint32_t **Results)
 { 
 	for (int K=0; K<k; ++K){
 		for (size_t b=0; b<32; ++b) {
@@ -496,9 +642,10 @@ main(int argc, char *argv[] )
 
 	mt.seed(time(NULL));
 
-	if (not(argc==6 || argc==9)) {
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <a> <d>\n";
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <a> <d> <t1> <t2> <N2>\n";
+	if (not(argc==8 ||argc==10 ||  argc==11)) {
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <a> <d>\n";
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <a> <d> <t1> <t2>\n";
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <a> <d> <t1> <t2> <N2>\n";
 		return 0;
 	}
 
@@ -507,19 +654,26 @@ main(int argc, char *argv[] )
 	size_t t=atoi(argv[2]);
 	size_t k=atoi(argv[3]);
 
-	size_t a=atof(argv[4]);
-	size_t d=atof(argv[5]);
+	double r=atof(argv[4]);
+	double pi=atof(argv[5]);
+
+	double a=atof(argv[6]);
+	double d=atof(argv[7]);
 
 	size_t t1;//=atoi(argv[4]);
 	size_t t2;//=atoi(argv[5]);
-	size_t N2;//=atoi(argv[6]);
+	size_t N2;//=ato{
 
-	if ( argc==9) {
-		t1=atoi(argv[6]);
-		t2=atoi(argv[7]);
-		N2=atoi(argv[8]);
+	if (argc==10) {
+		t1=atoi(argv[8]);
+		t2=atoi(argv[9]);
 	}
 
+	if ( argc==11) {
+		t1=atoi(argv[8]);
+		t2=atoi(argv[9]);
+		N2=atoi(argv[10]);
+	}
 
 	std::fstream header;
 	header.open ("header.txt", std::fstream::out);
@@ -529,38 +683,50 @@ main(int argc, char *argv[] )
 	individual *descendents;
 	individual *this_generation;
 		
-	uint_fast32_t **Pstate, **Ostate, **Results;
-	uint_fast32_t ***Rstate, ***thisR;	
+	uint32_t **Pstate, **Ostate, **Results;
+	uint32_t ***Rstate, ***thisR;	
 
-	uint_fast32_t **Recombination;
+	uint32_t **Recombination;
 //	std::bitset <32> br1(Results[0][N*K+y]);
 
-	Pstate=new uint_fast32_t *[2];
-	Pstate[0]=new uint_fast32_t [N];
-	Pstate[1]=new uint_fast32_t [N];
+	Pstate=new uint32_t *[2];
+	Pstate[0]=new uint32_t [N];
+	Pstate[1]=new uint32_t [N];
 
-	Ostate=new uint_fast32_t *[2];
-	Ostate[0]=new uint_fast32_t[N];
-	Ostate[1]=new uint_fast32_t[N];
+	Ostate=new uint32_t *[2];
+	Ostate[0]=new uint32_t[N];
+	Ostate[1]=new uint32_t[N];
 
-	Results=new uint_fast32_t *[2];
+	Results=new uint32_t *[2];
 //	Results[0]=new uint_fast32_t[N*k];
 //	Results[1]=new uint_fast32_t[N*k];
-	Results[0]=new uint_fast32_t[N];
-	Results[1]=new uint_fast32_t[N];
+	Results[0]=new uint32_t[N];
+	Results[1]=new uint32_t[N];
+	
 
 	// [0]->N [1]->N ](t) **t,2,N
 #ifdef REC
-	Rstate=new uint_fast32_t **[t];
+	std::uniform_int_distribution<int> r32(0,31);
+	std::uniform_int_distribution<int> r10(0,20);
+	Gcounter gcounter(mt, r);
+	Rstate=new uint32_t **[t];
 	for (size_t y=0; y<t; y++)
 	{
-		Rstate[y]=new uint_fast32_t *[2];
-		Rstate[y][0]=new uint_fast32_t[N];
-		Rstate[y][1]=new uint_fast32_t[N];
+		Rstate[y]=new uint32_t *[2];
+		Rstate[y][0]=new uint32_t[N];
+		Rstate[y][1]=new uint32_t[N];
 	}
 #endif
 
+#ifdef MUT
+#ifndef REC
+	std::uniform_int_distribution<int> r32(0,31);
+#endif
+	std::uniform_int_distribution<int> rN(0, N-1);
+	std::poisson_distribution<int> poisson(double(N)*pi*4.);
+#endif
 	if (argc==9) make_subdivided(&descendents, N, N2, t, t1, t2, mt);
+	if (argc==8) make_change(&descendents, N, t, t1, t2, mt);
 	else make(&descendents, N, t, mt);
 
 #ifdef REC
@@ -568,7 +734,7 @@ main(int argc, char *argv[] )
 #endif
 //	check(geneology);
 
-	for (size_t K=0; K<k; ++K){	
+	for (size_t K=0; K<k; ++K){
 		this_generation=descendents;
 
 		for (size_t x=0; x<N; ++x)
@@ -580,27 +746,34 @@ main(int argc, char *argv[] )
 		thisR=Rstate;
 
 		for (size_t y=0; y<t; ++y){
-			#pragma omp parallel for
+//			#pragma omp parallel for
 			for (size_t x=0; x<N; ++x){
 				//array of xs and bp.
+
 #ifdef REC
-				this_generation[x].update2(*((*thisR)[0]+x), *((*thisR)[1]+x), Pstate, Ostate, x);
+				this_generation[x].update2(*((*thisR)[0]+x), *((*thisR)[1]+x), Pstate, Ostate, x, r32, r10, mt);
 #else
 				this_generation[x].update(mt, Pstate, Ostate, x);
 #endif
 				if (K<1) this_generation[x].z=inc(this_generation[x].z,*(Ostate[0]+x),*(Ostate[1]+x), a, d);
 			}
+#ifdef MUT
+			mutate(Ostate[0], r32, rN, poisson, mt);
+			mutate(Ostate[1], r32, rN, poisson, mt);
+#endif
 		//	get_genome_thingies(Ostate, N);
 			std::swap(Pstate,Ostate);
 			this_generation+=N;
 #ifdef REC
+			recombine2((*thisR)[0], (*thisR)[0]+N, r32, gcounter, mt);
+			recombine2((*thisR)[1], (*thisR)[1]+N, r32, gcounter, mt);
 			++thisR;
 #endif
 		}
-//		memcpy(Results[0]+N*K, Pstate[0], N*8);
-//		memcpy(Results[1]+N*K, Pstate[1], N*8);
-		memcpy(Results[0], Pstate[0], N*8);
-		memcpy(Results[1], Pstate[1], N*8);
+
+		memcpy(Results[0], Pstate[0], N*sizeof(uint32_t) );
+		memcpy(Results[1], Pstate[1], N*sizeof(uint32_t) );
+
 		print_results4(std::cout, N, Results);
 	}
 

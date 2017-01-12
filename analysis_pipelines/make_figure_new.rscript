@@ -1,0 +1,110 @@
+rand<-read.csv(gzfile("../analysis_files/ran.txt.gz"), sep=" ")
+gc<-read.csv(gzfile("../analysis_files/ran_co.txt.gz"), sep=" ")
+sib<-read.csv(gzfile("../analysis_files/sib.txt.gz"), sep=" ")
+con<-read.csv(gzfile("../analysis_files/con.txt.gz"), sep=" ")
+
+fi1f<-read.csv(gzfile("../analysis_files/mixi1.txt.gz"), sep=" ")
+f12f<-read.csv(gzfile("../analysis_files/mix12.txt.gz"), sep=" ")
+f2pf<-read.csv(gzfile("../analysis_files/mix2p.txt.gz"), sep=" ")
+
+geomSeries <- function(base, max) {
+    base^(0:floor(log(max, base)))
+}
+
+pdf("figure_correction.pdf")
+
+LABSIZE<-2
+AXISSIZE<-1.5
+
+#bottom, left, rop, right
+par(mar=c(5.1,4.7,4.1,2.1) )
+
+lt<-geomSeries(1.2, 1000)
+gte<-lt[-length(lt)]
+lt<-lt[-1]
+mv<-c()
+for (i in 0:length(gte) )
+{
+	mv<-c(mv, (lt[i]+gte[i])/2)
+}
+
+N<-1000
+g<-c()
+b<-c()
+
+for (i in 0:(length(gte)-1) ){ g<-c(g, weighted.mean(rand$rho1[ rand$dist>=gte[i] & rand$dist<lt[i] ], rand$Den[ rand$dist>=gte[i] & rand$dist<lt[i] ], na.rm=TRUE) ) }
+for (i in 0:(length(gte)-1) ){ b<-c(b, weighted.mean(rand$rho2[ rand$dist>=gte[i] & rand$dist<lt[i] ], rand$Den[ rand$dist>=gte[i] & rand$dist<lt[i] ], na.rm=TRUE) ) }
+
+plot(mv, g, pch=20, ylim=c(0.001,0.5), cex.lab = LABSIZE, cex.axis = AXISSIZE, ylab="Correlation", xlab="Distance Between Sites (bp)", xlim=c(1, N), log="xy")
+points(mv, b, pch=20, col="red")
+
+abline(h=0.1, lty = 2, col="red")
+abline(v=0)
+abline(v=32, lty = 2)
+abline(v=64, lty = 2)
+
+dev.off()
+
+pdf("figure_new.pdf")
+par(mar=c(5.1,4.7,4.1,2.1) )
+
+plot(mv, g, pch=20, ylim=c(0.001,0.5), cex.lab = LABSIZE, cex.axis = AXISSIZE, ylab="Correlation", xlab="Distance Between Sites (bp)", xlim=c(1, N), log="xy")
+
+g<-c()
+for (i in 0:(length(gte)-1) ){ g<-c(g, weighted.mean(sib$rho1[ sib$dist>=gte[i] & sib$dist<lt[i] ], sib$Den[ sib$dist>=gte[i] & sib$dist<lt[i] ], na.rm=TRUE) ) }
+
+points(mv, g, pch=20, col="red")
+
+g<-c()
+for (i in 0:(length(gte)-1) ){ g<-c(g, weighted.mean(con$rho2[ con$dist>=gte[i] & con$dist<lt[i] ], con$Den[ con$dist>=gte[i] & con$dist<lt[i] ], na.rm=TRUE) ) }
+
+points(mv, g, pch=20, col="blue")
+
+abline(h=0.1, lty = 2, col="red")
+abline(v=0)
+abline(v=32, lty = 2)
+abline(v=64, lty = 2)
+dev.off()
+
+pdf("figure_gene_conv.pdf")
+
+g<-c()
+for (i in 0:(length(gte)-1) ){ g<-c(g, weighted.mean(gc$rho1[ gc$dist>=gte[i] & gc$dist<lt[i] ], gc$Den[ gc$dist>=gte[i] & gc$dist<lt[i] ], na.rm=TRUE) ) }
+b<-c()
+for (i in 0:(length(gte)-1) ){ b<-c(b, weighted.mean(rand$rho1[ rand$dist>=gte[i] & rand$dist<lt[i] ], rand$Den[ rand$dist>=gte[i] & rand$dist<lt[i] ], na.rm=TRUE) ) }
+
+plot(mv, b, pch=20, ylim=c(0.001,0.5), cex.lab = LABSIZE, cex.axis = AXISSIZE, ylab="Correlation", xlab="Distance Between Sites (bp)", xlim=c(1, N), log="xy")
+points(mv, g, pch=20, col="red")
+
+abline(h=0.1, lty = 2, col="red")
+abline(v=0)
+abline(v=32, lty = 2)
+abline(v=64, lty = 2)
+dev.off()
+
+pdf("figure_mixed.pdf")
+
+g<-c()
+for (i in 0:(length(gte)-1) ){ g<-c(g, weighted.mean(con$rho1[ con$dist>=gte[i] & con$dist<lt[i] ], con$Den[ con$dist>=gte[i] & con$dist<lt[i] ], na.rm=TRUE) ) }
+b<-c()
+for (i in 0:(length(gte)-1) ){ b<-c(b, weighted.mean(rand$rho1[ rand$dist>=gte[i] & rand$dist<lt[i] ], rand$Den[ rand$dist>=gte[i] & rand$dist<lt[i] ], na.rm=TRUE) ) }
+
+fi1<-c()
+for (i in 0:(length(gte)-1) ){ fi1<-c(fi1, weighted.mean(fi1f$rho1[ fi1f$dist>=gte[i] & fi1f$dist<lt[i] ], fi1f$Den[ fi1f$dist>=gte[i] & fi1f$dist<lt[i] ], na.rm=TRUE) ) }
+f12<-c()
+for (i in 0:(length(gte)-1) ){ f12<-c(f12, weighted.mean(f12f$rho1[ f12f$dist>=gte[i] & f12f$dist<lt[i] ], f12f$Den[ f12f$dist>=gte[i] & f12f$dist<lt[i] ], na.rm=TRUE) ) }
+f2p<-c()
+for (i in 0:(length(gte)-1) ){ f2p<-c(f2p, weighted.mean(f2pf$rho1[ f2pf$dist>=gte[i] & f2pf$dist<lt[i] ], f2pf$Den[ f2pf$dist>=gte[i] & f2pf$dist<lt[i] ], na.rm=TRUE) ) }
+
+
+plot(mv, b, pch=20, ylim=c(0.001,0.5), cex.lab = LABSIZE, cex.axis = AXISSIZE, ylab="Correlation", xlab="Distance Between Sites (bp)", xlim=c(1, N), log="xy")
+#points(mv, g, pch=20, col="red")
+points(mv, fi1, pch=20, col="red")
+#points(mv, f12, pch=20, col="green")
+points(mv, f2p, pch=20, col="blue")
+
+abline(h=0.1, lty = 2, col="red")
+abline(v=0)
+abline(v=32, lty = 2)
+abline(v=64, lty = 2)
+dev.off()

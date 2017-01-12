@@ -14,7 +14,10 @@ LDLIBS=
 
 CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
 
-DEBUG=-g -D DEBUG
+#DEBUG=-g -D DEBUG
+
+#CXXFLAGS=$(VERSION) $(STD) $(DEBUG) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
+
 OBJDIR=obj
 TARGET=./pedigree_sim
 
