@@ -59,14 +59,34 @@ void random_consang(uint32_t *P1,  uint32_t *P2, const size_t &size)
 	std::iota(all.begin(), all.end(), 0);
 //	std::random_shuffle(all.begin(), all.end() );
 	
-	for (size_t x=0; x<size-1; ++x)
+	P1[0]=size-1;
+	P2[0]=1;
+	for (size_t x=1; x<size-1; ++x)
 	{
-		P1[x]=all[x];
+		P1[x]=all[x-1];
 		P2[x]=all[x+1];	
 	}
-	P1[size-1]=size-1;
+	P1[size-1]=size-2;
 	P2[size-1]=0;
 }
+
+// self/sibs/halfsibs/1cousin/2cousin/3cousin, remainder is random.
+/*void mating_vector(uint32_t *P1,  uint32_t *P2, std::vector <uint32_t *> mate_vector, double probs[5], const size_t &size)
+{
+
+	std::discrete_distribution<int> distribution {self,sibs,halfsibs,1cousin,2cousin,3cousin,unrelated};
+	for (size_t x=0; x<size; ++x)
+	{
+		P1=uniform(mt);
+		N1=distribution(mt);
+		SIZE=mate_vector[P1][N1].size();
+		while (SIZE==0) SIZE=mate_vector[P1][N1--].size();
+		R=uniform(mt)%SIZE;
+		P2=mate_vector[P1][N1][R];
+		P1[x]=P1;
+		P2[x]=P2;
+	}
+}*/
 
 void print_head(std::ostream &out, const int &length)
 {
@@ -78,26 +98,12 @@ void print_names(int N, int t, std::ostream &out)
 	
 	out << "@NAME:FILES	VERSION:TYPED	FORMAT:TEXT\n";
 	out << "@FILE_NAME	SAMPLE_NAME	...\n";
-	out << "mpileup.txt";
+	out << "../analysis_files/mpileup.txt.gz";
 	for (size_t x; x<N; ++x){
 		out << '\t' << t*N+x;
 	}
 	out << "\n@END_TABLE\n";
 }
-
-/*
-void print_ld(std::ostream &out, const int &length)
-{
-	out;
-}
-*/
-
-/*
-void print_relatedness(std::ostream &out, const ..)
-{
-	
-}
-*/
 
 class Gcounter {
 	private:
@@ -377,21 +383,30 @@ void
 make (individual *descendents[], 
 	const size_t &generation_size, 
 	const size_t &simulation_length,
-	std::mt19937 &mt)
+	std::mt19937 &mt, char type)
 {
 	std::uniform_int_distribution<int> ri(0,generation_size-1);
 	*descendents=new individual[generation_size*simulation_length];
 
 	uint32_t *P1=new uint32_t[generation_size], *P2= new uint32_t[generation_size];
 
-//	for (size_t x=0; x<generation_size;*simulation_length; ++x)
 	for (size_t y=0; y<simulation_length; ++y)
-	{
-//		if { 
-//			random_sibs(P1, P2, generation_size);
-//			random_mating(P1, P2, generation_size);
-			random_consang(P1, P2, generation_size);
-//		}
+	{		
+		switch (type)
+		{
+			case 's':
+				random_sibs(P1, P2, generation_size);
+			break;
+			case 'r':
+				random_mating(P1, P2, generation_size);
+			break;
+			case 'i':
+				random_consang(P1, P2, generation_size);
+			break;
+			default:
+				random_mating(P1, P2, generation_size);
+			break;			
+		}
 		for (size_t x=0; x<generation_size; ++x)
 		{
 			(*descendents)[y*generation_size+x].P1=P1[x];
@@ -425,7 +440,7 @@ make_subdivided (individual *descendents[],
 		for (size_t x=0; x<generation_size; ++x)
 		{
 			i=t*generation_size+x;
-			if (start < t && t < stop){
+			if (start <= t && t < stop){
 				if (x < gh){
 					P1=ri1(mt);
 					P2=ri1(mt);
@@ -462,7 +477,7 @@ make_change (individual *descendents[],
 
 	for (size_t y=0; y<simulation_length; ++y)
 	{
-		if (start < y && y<stop) {
+		if (start <= y && y < stop) {
 			random_consang(P1, P2, generation_size);
 		} else {
 			random_mating(P1, P2, generation_size);
@@ -517,6 +532,16 @@ print_results4(std::ostream &out, const int &N, uint32_t **Results)
 			}
 		}
 		out << std::endl;
+	}
+//	out << "-------------------------------" << std::endl;
+}
+
+void
+print_results_bin(std::ostream &out, const int &N, uint32_t **Results)
+{ 
+	for (size_t y=0; y<N; ++y){
+		out.write((char *)(&(Results[0][y])), sizeof(uint32_t) );
+		out.write((char *)(&(Results[1][y])), sizeof(uint32_t) );
 	}
 //	out << "-------------------------------" << std::endl;
 }
@@ -642,10 +667,10 @@ main(int argc, char *argv[] )
 
 	mt.seed(time(NULL));
 
-	if (not(argc==8 ||argc==10 ||  argc==11)) {
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <a> <d>\n";
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <a> <d> <t1> <t2>\n";
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <a> <d> <t1> <t2> <N2>\n";
+	if (not(argc==10 ||argc==12 ||  argc==13)) {
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <a> <d>\n";
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <a> <d> <t1> <t2>\n";
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <a> <d> <t1> <t2> <N2>\n";
 		return 0;
 	}
 
@@ -657,22 +682,26 @@ main(int argc, char *argv[] )
 	double r=atof(argv[4]);
 	double pi=atof(argv[5]);
 
-	double a=atof(argv[6]);
-	double d=atof(argv[7]);
+	char type=argv[6][0];
+	char type2=argv[7][0];
+	bool binary=(type2=='b');
+
+	double a=atof(argv[8]);
+	double d=atof(argv[9]);
 
 	size_t t1;//=atoi(argv[4]);
 	size_t t2;//=atoi(argv[5]);
 	size_t N2;//=ato{
 
-	if (argc==10) {
-		t1=atoi(argv[8]);
-		t2=atoi(argv[9]);
+	if (argc==11) {
+		t1=atoi(argv[10]);
+		t2=atoi(argv[11]);
 	}
 
-	if ( argc==11) {
-		t1=atoi(argv[8]);
-		t2=atoi(argv[9]);
-		N2=atoi(argv[10]);
+	if ( argc==12) {
+		t1=atoi(argv[10]);
+		t2=atoi(argv[11]);
+		N2=atoi(argv[12]);
 	}
 
 	std::fstream header;
@@ -725,9 +754,11 @@ main(int argc, char *argv[] )
 	std::uniform_int_distribution<int> rN(0, N-1);
 	std::poisson_distribution<int> poisson(double(N)*pi*4.);
 #endif
-	if (argc==9) make_subdivided(&descendents, N, N2, t, t1, t2, mt);
-	if (argc==8) make_change(&descendents, N, t, t1, t2, mt);
-	else make(&descendents, N, t, mt);
+	if (argc==11) make_subdivided(&descendents, N, N2, t, t1, t2, mt);
+	if (argc==10) make_change(&descendents, N, t, t1, t2, mt);
+	else {
+		make(&descendents, N, t, mt, type);
+	}
 
 #ifdef REC
 	initR(Rstate, N, t, mt);
@@ -741,6 +772,7 @@ main(int argc, char *argv[] )
 		{
 			Pstate[0][x]=0x00000000;
 			Pstate[1][x]=0xFFFFFFFF;
+		//:	Pstate[1][x]=0x00000000;
 		};
 
 		thisR=Rstate;
@@ -774,7 +806,8 @@ main(int argc, char *argv[] )
 		memcpy(Results[0], Pstate[0], N*sizeof(uint32_t) );
 		memcpy(Results[1], Pstate[1], N*sizeof(uint32_t) );
 
-		print_results4(std::cout, N, Results);
+		if (binary) print_results_bin(std::cout, N, Results);
+		else print_results4(std::cout, N, Results);
 	}
 
 //	print_results(std::cout, k, N, Results);

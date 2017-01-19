@@ -4,7 +4,7 @@ bcf<-read.csv("../analysis_files/bcf_frequencies.csv", sep=" ", fill=TRUE, na.st
 gatk<-read.csv("../analysis_files/gatk_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
 angsd<-read.csv("../analysis_files/angsd_frequencies.csv", sep="\t", fill=TRUE, na.strings="NaN")
 
-pdf("figure_1.pdf")
+pdf("../figures/figure_1.pdf")
 
 names(true)[names(true)=="VR_FREQ"] <- "TRUE_FREQ"
 names(mapgd)[names(mapgd)=="VR_FREQ"] <- "MAPGD_FREQ"

@@ -1,6 +1,6 @@
 t<-read.csv("../analysis_files/admixture.csv", sep=" ")
 
-pdf("figure_3.pdf")
+pdf("../figures/figure_3.pdf")
 
 max_freq<-max(t$freq)
 
@@ -20,7 +20,7 @@ for (x in unique(t$run) ){
 }
 dev.off()
 
-pdf("figure_4.pdf")
+pdf("../figures/figure_4.pdf")
 par(mar=c(5.1,4.7,4.1,2.1) )
 for (x in unique(t$run) ){
 	if(mean(abs(t$rho1[t$run==x])  )>0.05){
@@ -31,7 +31,7 @@ for (x in unique(t$run) ){
 }
 dev.off()
 
-pdf("figure_5.pdf")
+pdf("../figures/figure_5.pdf")
 par(mar=c(5.1,4.7,4.1,2.1) )
 dev1<-c()
 dev2<-c()

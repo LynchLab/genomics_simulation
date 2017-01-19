@@ -1,11 +1,13 @@
 #!/bin/bash
 
-NUMBER=50
-TIME=$((NUMBER))
+NUMBER=100
+POPULATION=1000
+TIME=$((POPULATION))
 REF="reference.fa"
 COV=3
-SIZE=50000 #bwa craps out at snp densities gt ~1:150
-SNPS=500
+K=50
+SIZE=$(($K*50000)) #bwa craps out at snp densities gt ~1:32
+SNPS=$(($K*50))
 
 echo "simulating reference"
 python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
@@ -13,7 +15,10 @@ python reference_simulation/mutation_simulation.py -m ./sequences/reference_muta
 
 echo "simulating population"
 cd sequences
-../population_simulation/pedigree_sim $NUMBER $TIME $SNPS 1 0 > states.txt 2> var
+../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.01 0.01 r t 1 0 2> var | cut -d '	' -f 1-$((2*NUMBER+1)) > states.txt
+cat name-file.txt | cut -d '	' -f 1-101 > name-file2.txt
+mv name-file2.txt name-file.txt
+gzip pedigree.txt
 cd ..
 
 echo "making individual genomes"
@@ -66,11 +71,9 @@ cd analysis_pipelines
 
 #./mapgd_analysis_newton.sh $REF
 ./mapgd_analysis.sh $REF
-exit
 ./bcftools_analysis.sh $REF
 ./angsd_analysis.sh $REF
 ./gatk_analysis.sh $REF
-
 #./gcta_analysis.sh $REF
 
 python get_frequencies.py ../sequences/states.txt ../sequences/polymorphisms.map > ../analysis_files/true_frequencies.csv
@@ -78,3 +81,5 @@ python get_frequencies_from_vcf.py ../analysis_files/gatk_calls.vcf > ../analysi
 cat ../analysis_files/angsd_calls.vcf.mafs.gz | gunzip - | cut -d '	' -f 2,6 > ../analysis_files/angsd_frequencies.csv
 
 Rscript make_figure_1.rscript
+Rscript make_figure_3.rscript
+Rscript make_figure_4.rscript

@@ -1,13 +1,12 @@
-true<-read.csv("../analysis_files/true_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
-mapgd<-read.csv("../analysis_files/mapgd_calls-trim.csv", sep=" ", fill=TRUE, na.strings="NaN")
-#breseq<-read.csv("../analysis_files/breseq_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
-breseq<-read.csv("../analysis_files/mapgd_calls-trim.csv", sep=" ", fill=TRUE, na.strings="NaN")
+true<-read.csv("../analysis_files/true_ld.csv", sep=" ", fill=TRUE, na.strings="NaN")
+mapgd<-read.csv("../analysis_files/mapgd_linkage.out", sep=" ", fill=TRUE, na.strings="NaN")
+angsd<-read.csv("../analysis_files/mapgd_calls-trim.csv", sep=" ", fill=TRUE, na.strings="NaN")
 
-pdf("../figures/figure_2.pdf")
+pdf("../figures/figure_3.pdf")
 
 names(true)[names(true)=="VR_FREQ"] <- "TRUE_FREQ"
 names(mapgd)[names(mapgd)=="VR_FREQ"] <- "MAPGD_FREQ"
-names(breseq)[names(breseq)=="VR_FREQ"] <- "BRESEQ_FREQ"
+names(breseq)[names(breseq)=="VR_FREQ"] <- "ANGSD_FREQ"
 
 m<-merge(true, mapgd, by="POS", all.x=TRUE)
 m<-merge(m, breseq, by="POS", all.x=TRUE)
