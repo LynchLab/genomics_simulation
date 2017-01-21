@@ -1,0 +1,89 @@
+true<-read.csv("../analysis_files/true_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
+mapgd<-read.csv("../analysis_files/mapgd_calls-trim.csv", sep="\t", fill=TRUE, na.strings="NaN")
+bcf<-read.csv("../analysis_files/bcf_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
+gatk<-read.csv("../analysis_files/gatk_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
+angsd<-read.csv("../analysis_files/angsd_frequencies.csv", sep="\t", fill=TRUE, na.strings="NaN")
+
+pdf("../figures/figure_1.pdf")
+
+names(true)[names(true)=="VR_FREQ"] <- "TRUE_FREQ"
+names(mapgd)[names(mapgd)=="VR_FREQ"] <- "MAPGD_FREQ"
+names(bcf)[names(bcf)=="VR_FREQ"] <- "BCF_FREQ"
+names(gatk)[names(gatk)=="VR_FREQ"] <- "GATK_FREQ"
+names(angsd)[names(angsd)=="knownEM"] <- "ANGSD_FREQ"
+names(angsd)[names(angsd)=="position"] <- "POS"
+
+m<-merge(true, mapgd,by="POS",all.x=TRUE)
+m<-merge(m, bcf,by="POS",all.x=TRUE)
+m<-merge(m, gatk,by="POS",all.x=TRUE)
+m<-merge(m, angsd,by="POS",all.x=TRUE)
+
+k<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0), Z=c(0), A=c(0), B=c(0), D=c(0), E=c(0) )
+#k<-data.frame(V=c(0), W=c(0), X=c(0) )
+colnames(k)<-c("true", "bcf_bias", "bcf_rmse", "mapgd_bias", "mapgd_rmse", "gatk_bias", "gatk_rmse", "angsd_bias", "angsd_rmse")
+miss<-data.frame(U=c(0), V=c(0), W=c(0), X=c(0), Y=c(0) )
+colnames(miss)<-c("true", "bcf", "mapgd", "gatk", "angsd")
+m[1:10,]
+#colnames(k)<-c("true", "mapgd_bias", "mapgd_rmse")
+
+#m$VR_FREQ.y[is.na(m$VR_FREQ.y)] <- 0
+#m$VR_FREQ[is.na(m$VR_FREQ)] <- 0
+
+w<-0.05
+
+for (f in unique (sort(m$TRUE_FREQ)) )
+{
+	if ( (f>0) & (f<1) )
+	{
+		k=rbind(k, c(f, mean(m$BCF_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$BCF_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ), 
+				mean(m$MAPGD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$MAPGD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ), 
+				mean(m$GATK_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$GATK_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ), 
+				mean(m$ANGSD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$ANGSD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ) ) )
+		miss=rbind(miss, c(f, sum(is.na(m$BCF_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]))/sum(m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w) ), 
+				sum(is.na(m$MAPGD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]))/sum(m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w) ), 
+				sum(is.na(m$GATK_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]))/sum(m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w) ), 
+				sum(is.na(m$ANGSD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]))/sum(m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w) ) ) )
+	}
+}
+
+k[1:5,]
+
+p <- par(mar = c(5,4,4,4) + 0.1)
+
+plot(k$true, k$mapgd_bias, ylim=c(-0.1, 0.1), xlab="Sample frequency", ylab="Bias", type='l', col=rgb(0.8,0.8,0.8,0.0) )
+abline(h=0, col=rgb(0,0,0,1) )
+
+polygon(c(k$true, rev(k$true) ), c(k$bcf_bias-k$bcf_rmse, rev(k$bcf_bias+k$bcf_rmse) ), border = "black", col =rgb(0,0,1,0.5), lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$mapgd_bias-k$mapgd_rmse, rev(k$mapgd_bias+k$mapgd_rmse) ), border = "black", col =rgb(1,0,0,0.5) , lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$gatk_bias-k$gatk_rmse, rev(k$gatk_bias+k$gatk_rmse) ), border = "black", col =rgb(0,1,0,0.5) , lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$angsd_bias-k$angsd_rmse, rev(k$angsd_bias+k$angsd_rmse) ), border = "black", col =rgb(0,1,1,0.5) , lty = par("lty") )
+
+points(k$true, k$mapgd_bias, type='l', col=rgb(1,0,0,1) )
+points(k$true, k$gatk_bias, type='l', col=rgb(0,1,0,1) )
+points(k$true, k$bcf_bias, type='l', col=rgb(0,0,1,1) )
+points(k$true, k$angsd_bias, type='l', col=rgb(0,1,1,1) )
+
+par(new = T)
+
+#plot(miss$true[miss$true!=0], miss$mapgd[miss$true!=0], type='l', pch=20, log="y", col=rgb(1,0,0,0.5),lwd=2,  axes=F, xlab=NA, ylab=NA )
+#axis(side = 4)
+#mtext("Type II error rate", side = 4, line = 3, cex = par("cex.lab"))
+#points(miss$true[miss$true!=0], miss$bcf[miss$true!=0], pch=20, type='l', col=rgb(0,0,1,0.5),lwd=2 )
+#points(miss$true[miss$true!=0], miss$gatk[miss$true!=0], type='l', pch=20, col=rgb(0,1,0,0.5),lwd=2 )
+#points(miss$true[miss$true!=0], miss$angsd[miss$true!=0], pch=20, type='l', col=rgb(0,1,1,0.5),lwd=2 )
+
+summary<-data.frame(U=c(0), V=c(0), W=c(0) )
+colnames(summary)<-c("name", "bias", "mse")
+
+summary=rbind(summary, c("bcftools", mean(k$bcf_bias, na.rm=TRUE), mean(k$bcf_rmse, na.rm=TRUE) ) )
+summary=rbind(summary, c("mapgd", mean(k$mapgd_bias, na.rm=TRUE), mean(k$mapgd_rmse, na.rm=TRUE) ) )
+summary=rbind(summary, c("angsd", mean(k$angsd_bias, na.rm=TRUE), mean(k$angsd_rmse, na.rm=TRUE) ) )
+summary=rbind(summary, c("gatk", mean(k$gatk_bias, na.rm=TRUE), mean(k$gatk_rmse, na.rm=TRUE) ) )
+
+
+abline(h=0, col=rgb(0,0,0,1) )
+
+write.csv(m, "../analysis_files/all_snps.csv")
+write.csv(summary, "../analysis_files/summary.csv")
+
+dev.off()

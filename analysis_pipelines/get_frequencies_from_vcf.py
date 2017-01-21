@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys
 var_file=open(sys.argv[1])
-print "POS", "VR_FREQ"
+print "POS", "VR_FREQ", "F_STAT"
 ACI=9
 ANI=10
 line="#"
@@ -25,6 +25,7 @@ for line in var_file:
 		AC=float(keys["AC"])
 		AN=float(keys["AN"])
 		VR_FREQ=AC/AN
-		print POS, VR_FREQ
+		H=float(keys["InbreedingCoeff"])
+		print POS, VR_FREQ, H
 	except:
 		K=0

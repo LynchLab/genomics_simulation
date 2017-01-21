@@ -1,0 +1,5 @@
+mapgd<-read.csv("../analysis_files/mapgd_qq.gz", sep="\t", fill=TRUE, na.strings="NaN")
+
+pdf("../figures/figure_QQ.pdf")
+
+

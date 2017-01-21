@@ -70,23 +70,50 @@ void random_consang(uint32_t *P1,  uint32_t *P2, const size_t &size)
 	P2[size-1]=0;
 }
 
-// self/sibs/halfsibs/1cousin/2cousin/3cousin, remainder is random.
-/*void mating_vector(uint32_t *P1,  uint32_t *P2, std::vector <uint32_t *> mate_vector, double probs[5], const size_t &size)
+std::vector <std::vector <uint32_t> > make_mate_vector (double *coancestry, const size_t &size)
 {
+	std::vector <std::vector <uint32_t> > mate(size, vector <uint32_t > (5) );
+	for (size_t x=0; x<size; ++x)
+	{
+		for (size_t y=x+1; y<size; ++y)
+		{
+			c=*(coancestry+x*size+y);
+			if ( c >= 0.176 )
+				mate[x][0].append(y);
+			else if ( 0.088 <= c  && c < 0.176 )
+				mate[x][1].append(y);
+			else if ( 0.031 <= c  && c < 0.088 )
+				mate[x][2].append(y);
+			else if ( 0.008 <= c  && c < 0.031 )
+				mate[x][3].append(y);
+			else 
+				mate[x][4].append(y);
+		}
+	}
+	return mate;
+}
 
+// self/sibs/halfsibs/1cousin/2cousin/3cousin, remainder is random.
+void mating_vector(uint32_t *P1,  uint32_t *P2, double probs[5], double *coancestory, const size_t &size)
+{
 	std::discrete_distribution<int> distribution {self,sibs,halfsibs,1cousin,2cousin,3cousin,unrelated};
+	std::vector <std::vector <uint32_t> >mate_vector=make_mate_vector(coancestory);
+
 	for (size_t x=0; x<size; ++x)
 	{
 		P1=uniform(mt);
 		N1=distribution(mt);
 		SIZE=mate_vector[P1][N1].size();
-		while (SIZE==0) SIZE=mate_vector[P1][N1--].size();
+		while (SIZE==0) SIZE=mate_vector[P1][N1++].size();
 		R=uniform(mt)%SIZE;
 		P2=mate_vector[P1][N1][R];
 		P1[x]=P1;
 		P2[x]=P2;
+		coancestry(?,?)
 	}
-}*/
+
+	
+}
 
 void print_head(std::ostream &out, const int &length)
 {
@@ -163,7 +190,7 @@ recombine2 (uint32_t *recs, uint32_t *r_end, std::uniform_int_distribution<int> 
 				0x01ffffff,	0x03ffffff,	0x07ffffff, 	0x0fffffff,	
 				0x1fffffff, 	0x3fffffff, 	0x7fffffff, 	0xffffffff};
 
-/*	const uint32_t MASK[32]={0x7ffffff,	0x7fffffff,	0x7ffffffd,	0x7ffffff9,
+	const uint32_t MASK_BAD[32]={0x7ffffff,	0x7fffffff,	0x7ffffffd,	0x7ffffff9,
 				0x7ffffff1,	0x7fffffe1,	0x7fffffc1,	0x7fffff81,
 				0x7fffff01,	0x7ffffe01,	0x7ffffc01, 	0x7ffff801,	
 				0x7ffff001, 	0x7fffe001, 	0x7fffc001, 	0x7fff8001,
@@ -171,7 +198,6 @@ recombine2 (uint32_t *recs, uint32_t *r_end, std::uniform_int_distribution<int> 
 				0x7ff00001,	0x7fe00001,	0x7fc00001,	0x7f800001,
 				0x7f000001,	0x7e000001,	0x7c000001, 	0x78000001,	
 				0x70000001, 	0x60000001, 	0x40000001, 	0x00000001};
-*/
 
 	uint32_t *r=recs;
 	while (r!=r_end){
@@ -389,6 +415,9 @@ make (individual *descendents[],
 	*descendents=new individual[generation_size*simulation_length];
 
 	uint32_t *P1=new uint32_t[generation_size], *P2= new uint32_t[generation_size];
+	double *M;
+
+	M=new double[generation_size*generation_size/2];
 
 	for (size_t y=0; y<simulation_length; ++y)
 	{		
@@ -402,6 +431,9 @@ make (individual *descendents[],
 			break;
 			case 'i':
 				random_consang(P1, P2, generation_size);
+			break;
+			case 'v':
+				mating_vector(P1, P2, generation_size, M);
 			break;
 			default:
 				random_mating(P1, P2, generation_size);

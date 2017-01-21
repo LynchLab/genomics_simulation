@@ -1,0 +1,31 @@
+true<-read.csv("../analysis_files/true_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
+mapgd<-read.csv("../analysis_files/mapgd_calls-trim.csv", sep='\t', fill=TRUE, na.strings="NaN")
+gatk<-read.csv("../analysis_files/gatk_frequencies.csv", sep=' ', fill=TRUE, na.strings="NaN")
+
+pdf("../figures/figure_1c.pdf")
+
+names(true)[names(true)=="F_STAT"] <- "TRUE_FSTAT"
+names(mapgd)[names(mapgd)=="F_STAT"] <- "MAPGD_FSTAT"
+names(gatk)[names(gatk)=="F_STAT"] <- "GATK_FSTAT"
+
+m<-merge(true, mapgd, by="POS", all.x=TRUE)
+m<-merge(m, gatk, by="POS", all.x=TRUE)
+
+k<-data.frame(V=c(0), W=c(0) )
+colnames(k)<-c("p", "F")
+
+w<-0.02
+m[1,] 
+
+for (f in unique (sort(m$TRUE_FREQ)) )
+{
+	if ( (f>0) & (f<1) )
+	{
+		k=rbind(k, c(f, mean(m$MAPGD_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE) )  ) 
+		#k=rbind(k, c(f, mean(m$TRUE_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE) )  ) 
+	}
+}
+k
+plot(m$MAPGD_FSTAT, m$TRUE_FSTAT)
+
+dev.off()
