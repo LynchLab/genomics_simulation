@@ -12,12 +12,16 @@ for line in state_file:
 	H=0
 	for x in range(0, int(N), 2):
 		H+=int(s[x]!=s[x+1])
-		print s[x], s[x+1], "|", 
-	print H
+#		print s[x], s[x+1], "|", 
+#	print H
 	H/=(N/2.)
 	q=1-p
 	freq.append(p)
-	fstat.append(1-H/(2.*p*q) )
+	if p>0 and p<1:
+		fstat.append(1-H/(2.*p*q) )
+	else:
+		fstat.append( 0 )
+		
 
 for line in var_file:
 	line=line.strip('\n').split(' ')
