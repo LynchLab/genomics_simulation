@@ -1,31 +1,73 @@
 true<-read.csv("../analysis_files/true_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
 mapgd<-read.csv("../analysis_files/mapgd_calls-trim.csv", sep='\t', fill=TRUE, na.strings="NaN")
 gatk<-read.csv("../analysis_files/gatk_frequencies.csv", sep=' ', fill=TRUE, na.strings="NaN")
+angsd<-read.csv("../analysis_files/angsd_frequencies.csv", sep='\t', fill=TRUE, na.strings="NaN")
 
 pdf("../figures/figure_1c.pdf")
 
+LABSIZE=1
+AXISSIZE=1
+
+names(angsd)[names(angsd)=="Position"] <- "POS"
+names(angsd)[names(angsd)=="F"] <- "ANGSD_FSTAT"
+
 names(true)[names(true)=="F_STAT"] <- "TRUE_FSTAT"
+names(true)[names(true)=="VR_FREQ"] <- "TRUE_FREQ"
 names(mapgd)[names(mapgd)=="F_STAT"] <- "MAPGD_FSTAT"
 names(gatk)[names(gatk)=="F_STAT"] <- "GATK_FSTAT"
 
 m<-merge(true, mapgd, by="POS", all.x=TRUE)
 m<-merge(m, gatk, by="POS", all.x=TRUE)
+m<-merge(m, angsd, by="POS", all.x=TRUE)
 
-k<-data.frame(V=c(0), W=c(0) )
-colnames(k)<-c("p", "F")
+k<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0), Z=c(0) )
+colnames(k)<-c("p", "F_TRUE", "F_MAPGD", "F_GATK", "F_ANGSD")
 
-w<-0.02
+k2<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0) )
+colnames(k2)<-c("F_STAT", "MAPGD_BIAS", "GATK_BIAS", "ANGSD_BIAS")
+
+k3<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0) )
+colnames(k3)<-c("F_STAT", "MAPGD_RMSE", "GATK_RMSE", "ANGSD_RMSE")
+
+w<-0.01#2
 m[1,] 
 
 for (f in unique (sort(m$TRUE_FREQ)) )
 {
 	if ( (f>0) & (f<1) )
 	{
-		k=rbind(k, c(f, mean(m$MAPGD_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE) )  ) 
-		#k=rbind(k, c(f, mean(m$TRUE_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE) )  ) 
+		k=rbind(k, c(mean(m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE), mean(m$TRUE_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE), mean(m$MAPGD_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE), mean(m$GATK_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE), mean(m$ANGSD_FSTAT[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<(f+w)], na.rm=TRUE) ) )
 	}
 }
-k
-plot(m$MAPGD_FSTAT, m$TRUE_FSTAT)
+
+
+w<-0.1#2
+for (f in unique (sort(m$TRUE_FSTAT)) )
+{
+	if ( (f>0) & (f<1) )
+	{
+		k2=rbind(k2, c(mean(m$MAPGD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), mean(m$GATK_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), mean(m$ANGSD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE) ) )
+	}
+}
+
+plot(k$p, k$F_TRUE)
+plot(k$p, k$F_MAPGD)
+plot(k$p, k$F_GATK)
+plot(k$p, k$F_ANGSD)
+
+plot(k2$F_STAT, k2$MAPGD_BIAS, ylim=c(-0.1, 0.1), pch=20, col="RED")
+points(k2$F_STAT, k2$GATK_BIAS, pch=20, col="GREEN")
+points(k2$F_STAT, k2$ANGSD_BIAS, pch=20, col="BLUE")
+
+dev1<-c()
+dev2<-c()
+dev3<-c()
+
+for (x in 0:length(m$TRUE_FSTAT) ){
+	dev1<-append(dev1, m$TRUE_FSTAT[x]-m$MAPGD_FSTAT[x])
+	dev2<-append(dev2, m$TRUE_FSTAT[x]-m$GATK_FSTAT[x])
+	dev3<-append(dev3, m$TRUE_FSTAT[x]-m$ANGSD_FSTAT[x])
+}
+boxplot(dev1, dev2, dev3, names = c("MAPGD", "GATK", "ANGSD"), cex.lab = LABSIZE, cex.axis = AXISSIZE)
 
 dev.off()

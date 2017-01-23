@@ -25,7 +25,10 @@ for line in var_file:
 		AC=float(keys["AC"])
 		AN=float(keys["AN"])
 		VR_FREQ=AC/AN
-		H=float(keys["InbreedingCoeff"])
-		print POS, VR_FREQ, H
 	except:
-		K=0
+		continue
+	try:
+		H=float(keys["InbreedingCoeff"])
+	except:
+		H=0
+	print POS, VR_FREQ, H

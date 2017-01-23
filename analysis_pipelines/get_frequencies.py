@@ -30,3 +30,4 @@ for line in var_file:
 print "POS", "VR_FREQ", "F_STAT"
 for x in range(0, len(var) ):
 	print var[x], freq[x], fstat[x]
+print len(var), len(freq), len(fstat)

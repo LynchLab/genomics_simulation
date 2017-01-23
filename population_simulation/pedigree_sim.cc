@@ -8,7 +8,7 @@
 #include <omp.h>
 #include <iomanip>
 
-#define REC
+//#define REC
 #define MUT
 
 #define LOCI	32
@@ -70,7 +70,7 @@ void random_consang(uint32_t *P1,  uint32_t *P2, const size_t &size)
 	P2[size-1]=0;
 }
 
-std::vector <std::vector <uint32_t> > make_mate_vector (double *coancestry, const size_t &size)
+/*std::vector <std::vector <uint32_t> > make_mate_vector (double *coancestry, const size_t &size)
 {
 	std::vector <std::vector <uint32_t> > mate(size, vector <uint32_t > (5) );
 	for (size_t x=0; x<size; ++x)
@@ -113,7 +113,7 @@ void mating_vector(uint32_t *P1,  uint32_t *P2, double probs[5], double *coances
 	}
 
 	
-}
+}*/
 
 void print_head(std::ostream &out, const int &length)
 {
@@ -432,9 +432,9 @@ make (individual *descendents[],
 			case 'i':
 				random_consang(P1, P2, generation_size);
 			break;
-			case 'v':
-				mating_vector(P1, P2, generation_size, M);
-			break;
+//			case 'v':
+//				mating_vector(P1, P2, generation_size, M);
+//			break;
 			default:
 				random_mating(P1, P2, generation_size);
 			break;			
@@ -549,14 +549,14 @@ print_results4(std::ostream &out, const int &N, uint32_t **Results)
 		for (size_t y=0; y<N; ++y){
 			std::bitset <32> bits0(Results[0][y]);
 			std::bitset <32> bits1(Results[1][y]);
-			if (bits0[b]) {
-				if (bits1[b]) {
+			if (!bits0[b]) {
+				if (!bits1[b]) {
 					out << "	0	0";
 				} else {
 					out << "	0	1";
 				}
 			} else {
-				if (bits1[b]) {
+				if (!bits1[b]) {
 					out << "	1	0";
 				} else {
 					out << "	1	1";
@@ -616,14 +616,14 @@ for (int K=0; K<k; ++K){
 		for (size_t y=0; y<N; ++y){
 			std::bitset <32> bits0(Results[0][N*K+y]);
 			std::bitset <32> bits1(Results[1][N*K+y]);
-			if (bits0[b]) {
-				if (bits1[b]) {
+			if (!bits0[b]) {
+				if (!bits1[b]) {
 					out << "	0	0";
 				} else {
 					out << "	0	1";
 				}
 			} else {
-				if (bits1[b]) {
+				if (!bits1[b]) {
 					out << "	1	0";
 				} else {
 					out << "	1	1";
@@ -644,14 +644,14 @@ for (int K=0; K<k; ++K){
 		for (size_t y=0; y<N; ++y){
 			std::bitset <32> bits0(Results[0][N*K+y]);
 			std::bitset <32> bits1(Results[1][N*K+y]);
-			if (bits0[b]) {
-				if (bits1[b]) {
+			if (!bits0[b]) {
+				if (!bits1[b]) {
 					out << "	0";
 				} else {
 					out << "	1";
 				}
 			} else {
-				if (bits1[b]) {
+				if (!bits1[b]) {
 					out << "	1";
 				} else {
 					out << "	2";
@@ -672,14 +672,14 @@ print_results(std::ostream &out, const int &k, const int &N, uint32_t **Results)
 			for (size_t y=0; y<N; ++y){
 				std::bitset <32> bits0(Results[0][N*K+y]);
 				std::bitset <32> bits1(Results[1][N*K+y]);
-				if (bits0[b]) {
-					if (bits1[b]) {
+				if (!bits0[b]) {
+					if (!bits1[b]) {
 						out << "	12	TtTtTtTtTtTt	~~~~~~~~~~~";
 					} else {
 						out << "	12	TtTtTtAaAaAa	~~~~~~~~~~~";
 					}
 				} else {
-					if (bits1[b]) {
+					if (!bits1[b]) {
 						out << "	12	TtTtTtAaAaAa	~~~~~~~~~~~";
 					} else {
 						out << "	12	AaAaAaAaAaAa	~~~~~~~~~~~";
@@ -803,8 +803,8 @@ main(int argc, char *argv[] )
 		for (size_t x=0; x<N; ++x)
 		{
 			Pstate[0][x]=0x00000000;
-			Pstate[1][x]=0xFFFFFFFF;
-		//:	Pstate[1][x]=0x00000000;
+		//	Pstate[1][x]=0xFFFFFFFF;
+			Pstate[1][x]=0x00000000;
 		};
 
 		thisR=Rstate;
