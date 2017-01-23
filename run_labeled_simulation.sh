@@ -1,7 +1,7 @@
 #!/bin/bash
 
-POPULATION=50
-SAMPLE=50
+POPULATION=10
+SAMPLE=10
 TIME=$((POPULATION))
 REF="reference.fa"
 COV=15
