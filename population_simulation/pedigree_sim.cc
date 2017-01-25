@@ -126,7 +126,7 @@ void print_names(int N, int t, std::ostream &out)
 	out << "@NAME:FILES	VERSION:TYPED	FORMAT:TEXT\n";
 	out << "@FILE_NAME	SAMPLE_NAME	...\n";
 	out << "../analysis_files/mpileup.txt.gz";
-	for (size_t x; x<N; ++x){
+	for (size_t x=0; x<N; ++x){
 		out << '\t' << t*N+x;
 	}
 	out << "\n@END_TABLE\n";
@@ -723,14 +723,14 @@ main(int argc, char *argv[] )
 
 	size_t t1;//=atoi(argv[4]);
 	size_t t2;//=atoi(argv[5]);
-	size_t N2;//=ato{
+	size_t N2;//=ato
 
-	if (argc==11) {
+	if (argc==12) {
 		t1=atoi(argv[10]);
 		t2=atoi(argv[11]);
 	}
 
-	if ( argc==12) {
+	if ( argc==13) {
 		t1=atoi(argv[10]);
 		t2=atoi(argv[11]);
 		N2=atoi(argv[12]);
@@ -786,9 +786,11 @@ main(int argc, char *argv[] )
 	std::uniform_int_distribution<int> rN(0, N-1);
 	std::poisson_distribution<int> poisson(double(N)*pi*4.);
 #endif
-	if (argc==11) make_subdivided(&descendents, N, N2, t, t1, t2, mt);
-	if (argc==10) make_change(&descendents, N, t, t1, t2, mt);
+	std::cerr << argc << std::endl;
+	if (argc==13) make_subdivided(&descendents, N, N2, t, t1, t2, mt);
+	else if (argc==12) make_change(&descendents, N, t, t1, t2, mt);
 	else {
+		std::cerr << argc << std::endl;
 		make(&descendents, N, t, mt, type);
 	}
 

@@ -2,7 +2,7 @@
 
 name=$1
 
-samtools mpileup -B ../sequences/seq*.sort.rmdup.bam -f ../sequences/$name -q 1 -Q 0 | gzip - > ../analysis_files/mpileup.txt.gz
+samtools mpileup -B ../sequences/seq*.sort.rmdup.bam -f ../sequences/$name -q 15 -Q 1 | gzip - > ../analysis_files/mpileup.txt.gz
 mapgd proview -H ../sequences/temp-header.txt -n ../sequences/name-file.txt -bs | gzip - > ../analysis_files/pro.txt.gz
 echo "calling alleles"
 mapgd allele -i ../analysis_files/pro.txt.gz -c 1 -g 3 | mapgd filter -q 0.001 -p 10 -g 3 -N 2 | gzip - > ../analysis_files/mapgd_calls.txt.gz

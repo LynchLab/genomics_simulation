@@ -1,6 +1,8 @@
 GATK_PATH=~/src/gatk
 PICARD_PATH=~/src/picard
 
+HET=0.01
+
 ref=$1
 root=`echo $1 | cut -d '.' -f 1`
 name_pre=`echo $name | cut -f 1 -d '.'`

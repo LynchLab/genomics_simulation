@@ -1,10 +1,12 @@
 #!/bin/bash
 
 POPULATION=100
+POP2=$((POPULATION/2))
 SAMPLE=100
 TIME=$((10*POPULATION))
+TIMEX=$((9*PULATION+POPULATION/2))
 REF="reference.fa"
-COV=15
+COV=3
 K=20
 SIZE=$(($K*10000)) #bwa craps out at snp densities gt ~1:32
 SNPS=$(($K*10))
@@ -15,7 +17,8 @@ python reference_simulation/mutation_simulation.py -m ./sequences/reference_muta
 
 echo "simulating population"
 cd sequences
-../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.0 0.005 r t 1 0 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
+../population_simulation/non_pedigree_sim $POPULATION $SNPS t -0.25 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
+#../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.0 0.005 r t 1 0 $TIMEX $((TIME)) $POP2 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
 cat name-file.txt | cut -d '	' -f 1-$((SAMPLE+2)) > name-file2.txt
 mv name-file2.txt name-file.txt
 rm -rf pedigree.txt.gz
@@ -64,15 +67,15 @@ do
 	rm temp.0.sam
 	rm temp.1.sam
 
-#	rm seqeuences/temp.1.fq
-#	rm seqeuences/temp.2.fq
-
 	cd sequences
 	samtools index $NAME.sort.rmdup.bam
 	cd ..
 done
 
 ls sequences/ | grep seq.*.sort.rmdup.bam$ > sequences/bam_list.txt
+
+rm seqeuences/temp.1.fq
+rm seqeuences/temp.2.fq
 
 cd analysis_pipelines
 
@@ -89,8 +92,6 @@ python get_frequencies.py ../sequences/states.txt ../sequences/polymorphisms.map
 gzip ../sequences/states.txt
 
 python get_frequencies_from_vcf.py ../analysis_files/gatk_calls.vcf > ../analysis_files/gatk_frequencies.csv
-#cat ../analysis_files/angsd_calls.vcf.mafs.gz | gunzip - | cut -d '	' -f 2,6 > ../analysis_files/angsd_frequencies.csv
-cat ../analysis_files/angsd_calls.vcf.hweF.gz | gunzip - | cut -d '	' -f 2,5,7 > ../analysis_files/angsd_frequencies.csv
 
 Rscript make_figure_1a.rscript	#Bias RMSE of allele frequenceis
 Rscript make_figure_1c.rscript	#Bias RMSE of inbreeding

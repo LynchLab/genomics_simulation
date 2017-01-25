@@ -5,8 +5,8 @@ angsd<-read.csv("../analysis_files/angsd_frequencies.csv", sep='\t', fill=TRUE, 
 
 pdf("../figures/figure_1c.pdf")
 
-LABSIZE=1
-AXISSIZE=1
+source("figures.conf")
+p <- par(mar=MAR)
 
 names(angsd)[names(angsd)=="Position"] <- "POS"
 names(angsd)[names(angsd)=="F"] <- "ANGSD_FSTAT"
@@ -24,10 +24,10 @@ k<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0), Z=c(0) )
 colnames(k)<-c("p", "F_TRUE", "F_MAPGD", "F_GATK", "F_ANGSD")
 
 k2<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0) )
-colnames(k2)<-c("F_STAT", "MAPGD_BIAS", "GATK_BIAS", "ANGSD_BIAS")
+colnames(k2)<-c("F_STAT", "mapgd_bias", "gatk_bias", "angsd_bias")
 
 k3<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0) )
-colnames(k3)<-c("F_STAT", "MAPGD_RMSE", "GATK_RMSE", "ANGSD_RMSE")
+colnames(k3)<-c("F_STAT", "mapgd_rmse", "gatk_rmse", "angsd_rmse")
 
 w<-0.01#2
 m[1,] 
@@ -41,23 +41,38 @@ for (f in unique (sort(m$TRUE_FREQ)) )
 }
 
 
-w<-0.1#2
+w<-0.05#2
 for (f in unique (sort(m$TRUE_FSTAT)) )
 {
-	if ( (f>0) & (f<1) )
+	if ( (f>-1) & (f<1) )
 	{
-		k2=rbind(k2, c(mean(m$MAPGD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), mean(m$GATK_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), mean(m$ANGSD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE) ) )
+		k2=rbind(k2, c(mean(m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), mean(m$MAPGD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), mean(m$GATK_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), mean(m$ANGSD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE) ) )
+		k3=rbind(k3, c(mean(m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE), sqrt(var(m$MAPGD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE) ), sqrt(var(m$GATK_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE) ), sqrt(var(m$ANGSD_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)]-m$TRUE_FSTAT[m$TRUE_FSTAT>=(f-w) & m$TRUE_FSTAT<(f+w)], na.rm=TRUE) ) ) )
 	}
 }
 
-plot(k$p, k$F_TRUE)
-plot(k$p, k$F_MAPGD)
-plot(k$p, k$F_GATK)
-plot(k$p, k$F_ANGSD)
+k = k[-1,]
+k2 = k2[-1,]
+k3 = k3[-1,]
 
-plot(k2$F_STAT, k2$MAPGD_BIAS, ylim=c(-0.1, 0.1), pch=20, col="RED")
-points(k2$F_STAT, k2$GATK_BIAS, pch=20, col="GREEN")
-points(k2$F_STAT, k2$ANGSD_BIAS, pch=20, col="BLUE")
+plot(k$p, k$F_TRUE, xlab="Sample Frequency", ylab="Mean F", cex.lab = LABSIZE, cex.axis = AXISSIZE, type='l', lwd=LINESIZE, pch=20, ylim=c(-1, 1) )
+points(k$p, k$F_MAPGD, type='l', lwd=LINESIZE, pch=20, col="RED")
+points(k$p, k$F_GATK, type='l', lwd=LINESIZE, pch=20, col="GREEN")
+points(k$p, k$F_ANGSD, type='l', lwd=LINESIZE, pch=20, col="CYAN")
+
+plot(k2$F_STAT, k2$mapgd_bias, ylim=c(-0.5, 0.5), type='l', cex.lab = LABSIZE, cex.axis = AXISSIZE,  lwd=LINESIZE, xlab="Sample F", ylab="Bias", pch=20, col="RED")
+
+polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$mapgd_bias-k3$mapgd_rmse, rev(k2$mapgd_bias+k3$mapgd_rmse) ), border = rgb(0.5,0,0, 0), col =rgb(1,0,0,0.5), lty = par("lty") )
+polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$gatk_bias-k3$gatk_rmse, rev(k2$gatk_bias+k3$gatk_rmse) ), border = rgb(0,0.5,0,0), col =rgb(0,1,0,0.5), lty = par("lty") )
+polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$angsd_bias-k3$angsd_rmse, rev(k2$angsd_bias+k3$angsd_rmse) ), border = rgb(0,0.5,0.5,0), col =rgb(0,1,1,0.5), lty = par("lty") )
+
+polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$mapgd_bias-k3$mapgd_rmse, rev(k2$mapgd_bias+k3$mapgd_rmse) ), lwd=LINESIZE, border = rgb(0.5,0,0), col =rgb(1,0,0,0.0), lty = par("lty") )
+polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$gatk_bias-k3$gatk_rmse, rev(k2$gatk_bias+k3$gatk_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0), col =rgb(0,1,0,0.0), lty = par("lty") )
+polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$angsd_bias-k3$angsd_rmse, rev(k2$angsd_bias+k3$angsd_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0.5), col =rgb(0,1,1,0.0), lty = par("lty") )
+
+
+points(k2$F_STAT, k2$gatk_bias, type='l', lwd=LINESIZE, pch=20, col="GREEN")
+points(k2$F_STAT, k2$angsd_bias, type='l', lwd=LINESIZE, pch=20, col="CYAN")
 
 dev1<-c()
 dev2<-c()
