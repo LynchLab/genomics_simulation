@@ -10,7 +10,7 @@ parser.add_argument('-s', metavar='--sequence', type=str,
                    help='sequence file')
 parser.add_argument('-m', metavar='--mutation', type=str,
                    help='mutation file')
-parser.add_argument('-N', metavar='--name', type=str, default="simulated_sequence",
+parser.add_argument('-N', metavar='--name', type=str, default="1",
                    help='sequence name')
 
 args = parser.parse_args()
@@ -43,6 +43,6 @@ for line in File:
 	INT_A, INT_B, INT_C, N=map(int, [INT_A, INT_B, INT_C, N])
 	seq=mutation.fnsk[name](seq, INT_A-1, INT_B, INT_C, BOOL, N)		
 
-print ">"+seq_name+":"+str(len(seq))
+print ">"+seq_name
 for x in range(0, len(seq), 90):
 	print seq[x:(x+90)]

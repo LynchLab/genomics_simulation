@@ -1,29 +1,33 @@
 #!/bin/bash
 
-POPULATION=100
+POPULATION=400
 POP2=$((POPULATION/2))
-SAMPLE=100
-TIME=$((10*POPULATION))
+SAMPLE=400
+TIME=$((2*POPULATION))
 TIMEX=$((9*PULATION+POPULATION/2))
 REF="reference.fa"
-COV=3
-K=20
-SIZE=$(($K*10000)) #bwa craps out at snp densities gt ~1:32
+COV=10
+K=2000
+SIZE=$(($K*1000)) #make sure to use bwa mem when snp densities gt ~1:32
 SNPS=$(($K*10))
 
 echo "simulating reference"
 python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
-python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/reference.fa
+python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/$REF
+#cp ./real_genomes/S288C_Chromosome\ I.fsa ./sequences/$REF
 
 echo "simulating population"
 cd sequences
-../population_simulation/non_pedigree_sim $POPULATION $SNPS t -0.25 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
-#../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.0 0.005 r t 1 0 $TIMEX $((TIME)) $POP2 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
+#../population_simulation/non_pedigree_sim $POPULATION $SNPS t 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
+#../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.002 0.002 s b 1 0.5 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
+../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.0 0.01 s b 1 -1 10 20 200 2> var > states.txt
 cat name-file.txt | cut -d '	' -f 1-$((SAMPLE+2)) > name-file2.txt
 mv name-file2.txt name-file.txt
 rm -rf pedigree.txt.gz
 gzip pedigree.txt
 cd ..
+
+exit 
 
 echo "making individual genomes"
 cd variant_simulation
@@ -40,19 +44,23 @@ do
 
 	echo $NAME
 
-#	./sequencing_simulation/art_illumina -qs -15 -qs2 -15 -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
-#	./sequencing_simulation/art_illumina -qs -15 -qs2 -15 -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
+	./sequencing_simulation/art_illumina -qs -15 -qs2 -15 -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
+	./sequencing_simulation/art_illumina -qs -15 -qs2 -15 -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
 
-	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
-	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
+#	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
+#	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
 
 	cat temp.01.fq > ./sequences/temp.1.fq
 	cat temp.11.fq >> ./sequences/temp.1.fq
 	cat temp.02.fq > ./sequences/temp.2.fq
 	cat temp.12.fq >> ./sequences/temp.2.fq
 
-	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($SAMPLE*$TIME+10#$x)) > /dev/null 2> /dev/null
+	bash ./alignment/run_mem_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($SAMPLE*$TIME+10#$x)) > /dev/null 2> /dev/null
+#	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($SAMPLE*$TIME+10#$x)) > /dev/null 2> /dev/null
 #	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($SAMPLE*$TIME+10#$x)) 
+
+	mv ./sequences/temp.1.fq ./sequences/$NAME.0.fq
+	mv ./sequences/temp.2.fq ./sequences/$NAME.1.fq
 
 	rm temp.01.fq
 	rm temp.11.fq
@@ -85,13 +93,13 @@ cd analysis_pipelines
 ./angsd_analysis.sh $REF
 ./gatk_analysis.sh $REF
 
+./gcta_analysis.sh 
+./gatk_analysis.sh $REF
 #./gcta_analysis.sh $REF
 
 gunzip ../sequences/states.txt
 python get_frequencies.py ../sequences/states.txt ../sequences/polymorphisms.map > ../analysis_files/true_frequencies.csv
 gzip ../sequences/states.txt
-
-python get_frequencies_from_vcf.py ../analysis_files/gatk_calls.vcf > ../analysis_files/gatk_frequencies.csv
 
 Rscript make_figure_1a.rscript	#Bias RMSE of allele frequenceis
 Rscript make_figure_1c.rscript	#Bias RMSE of inbreeding

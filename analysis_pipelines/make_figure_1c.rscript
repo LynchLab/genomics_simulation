@@ -41,7 +41,7 @@ for (f in unique (sort(m$TRUE_FREQ)) )
 }
 
 
-w<-0.05#2
+w<-0.01#2
 for (f in unique (sort(m$TRUE_FSTAT)) )
 {
 	if ( (f>-1) & (f<1) )
@@ -66,9 +66,9 @@ polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$mapgd_bias-k3$mapgd_rmse, rev(k2$map
 polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$gatk_bias-k3$gatk_rmse, rev(k2$gatk_bias+k3$gatk_rmse) ), border = rgb(0,0.5,0,0), col =rgb(0,1,0,0.5), lty = par("lty") )
 polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$angsd_bias-k3$angsd_rmse, rev(k2$angsd_bias+k3$angsd_rmse) ), border = rgb(0,0.5,0.5,0), col =rgb(0,1,1,0.5), lty = par("lty") )
 
-polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$mapgd_bias-k3$mapgd_rmse, rev(k2$mapgd_bias+k3$mapgd_rmse) ), lwd=LINESIZE, border = rgb(0.5,0,0), col =rgb(1,0,0,0.0), lty = par("lty") )
-polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$gatk_bias-k3$gatk_rmse, rev(k2$gatk_bias+k3$gatk_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0), col =rgb(0,1,0,0.0), lty = par("lty") )
-polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$angsd_bias-k3$angsd_rmse, rev(k2$angsd_bias+k3$angsd_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0.5), col =rgb(0,1,1,0.0), lty = par("lty") )
+#polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$mapgd_bias-k3$mapgd_rmse, rev(k2$mapgd_bias+k3$mapgd_rmse) ), lwd=LINESIZE, border = rgb(0.5,0,0), col =rgb(1,0,0,0.0), lty = par("lty") )
+#polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$gatk_bias-k3$gatk_rmse, rev(k2$gatk_bias+k3$gatk_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0), col =rgb(0,1,0,0.0), lty = par("lty") )
+#polygon(c(k2$F_STAT, rev(k2$F_STAT) ), c(k2$angsd_bias-k3$angsd_rmse, rev(k2$angsd_bias+k3$angsd_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0.5), col =rgb(0,1,1,0.0), lty = par("lty") )
 
 
 points(k2$F_STAT, k2$gatk_bias, type='l', lwd=LINESIZE, pch=20, col="GREEN")

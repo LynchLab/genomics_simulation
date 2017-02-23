@@ -15,3 +15,6 @@ do
 done
 
 java -jar $GATK_PATH/GenomeAnalysisTK.jar -R ../sequences/$root.fa -T UnifiedGenotyper $FILE -o ../analysis_files/gatk_calls.vcf -stand_call_conf 5
+
+python get_frequencies_from_vcf.py ../analysis_files/gatk_calls.vcf > ../analysis_files/gatk_frequencies.csv
+gzip ../analysis_files/gatk_calls.vcf

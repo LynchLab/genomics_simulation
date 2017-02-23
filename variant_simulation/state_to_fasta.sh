@@ -2,8 +2,10 @@ ref=$1
 states=$2
 SIZE="`head -1 $states | grep '	' -o | wc -l`"
 POLY=../sequences/polymorphisms.map
+REFSIZE=$((`tail -n +2 $1 | wc -c`-`tail -n +2 $1 | wc -l`))
 
-python mutation_simulation2.py -n "`wc -l $states | cut -d ' ' -f 1`" -l "`head -1 $ref | cut -f 2 -d ':' `" -o True > temp
+
+python mutation_simulation2.py -n "`wc -l $states | cut -d ' ' -f 1`" -l $REFSIZE -o True > temp
 python mutation_sort.py temp > $POLY
 
 rm temp

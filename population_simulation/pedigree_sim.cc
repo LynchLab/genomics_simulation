@@ -12,6 +12,7 @@
 #define MUT
 
 #define LOCI	32
+#define TRAITS	1
 
 
 void random_mating(uint32_t *P1,  uint32_t *P2, const size_t &size)
@@ -70,7 +71,40 @@ void random_consang(uint32_t *P1,  uint32_t *P2, const size_t &size)
 	P2[size-1]=0;
 }
 
-/*std::vector <std::vector <uint32_t> > make_mate_vector (double *coancestry, const size_t &size)
+
+/*
+class coancestry {
+{
+	private:
+	size_t _size, double *co;
+	public:
+	Slow_index(const size_t &size)
+	{	
+		_size=size;
+		co=new double [size];
+	}
+
+	double
+	operator () (const uint32_t &d1, const uint32_t &d2)	{return *(co+size*d1+d2);};
+
+	double *
+	operator () (const uint32_t &d1, const uint32_t &d2)	{return co+size*d1+d2;};
+}
+private:
+public:
+		
+	return *(coancestry+x*size+y);
+}
+
+update_coancestry(co, x, y, P1x, P2x, P1y, P2y)
+{
+	if (x!=y)
+		coancestry[x][y]=( co(P1x, P1y), co(P1x, P2y), co(P2x, P1y), co(P2x, P2y) )/4.;
+	if (x==y)
+		coancestry[x][y]=(1.+co(P1x, P2x) )/2.;
+}
+
+std::vector <std::vector <uint32_t> > make_mate_vector (double *coancestry, const size_t &size)
 {
 	std::vector <std::vector <uint32_t> > mate(size, vector <uint32_t > (5) );
 	for (size_t x=0; x<size; ++x)
@@ -93,7 +127,6 @@ void random_consang(uint32_t *P1,  uint32_t *P2, const size_t &size)
 	return mate;
 }
 
-// self/sibs/halfsibs/1cousin/2cousin/3cousin, remainder is random.
 void mating_vector(uint32_t *P1,  uint32_t *P2, double probs[5], double *coancestory, const size_t &size)
 {
 	std::discrete_distribution<int> distribution {self,sibs,halfsibs,1cousin,2cousin,3cousin,unrelated};
@@ -109,10 +142,16 @@ void mating_vector(uint32_t *P1,  uint32_t *P2, double probs[5], double *coances
 		P2=mate_vector[P1][N1][R];
 		P1[x]=P1;
 		P2[x]=P2;
-		coancestry(?,?)
 	}
 
-	
+	for (size_t x=0; x<size; ++x){
+	for (size_t y=x+1; y<size; ++y){
+		sum+=update_coancestry(x, y, P1[x], P2[x], P1[y], P2[y]);
+	}
+	}
+	for (size_t x=0; x<size; ++x){
+		co-=mean;
+	}
 }*/
 
 void print_head(std::ostream &out, const int &length)
@@ -245,7 +284,7 @@ private:
 	static uint32_t ID;
 public:
 	uint32_t P1, P2;
-	double z;
+	double z[TRAITS];
 //	uint32_t id;
 //	uint32_t P1_id;
 //	uint32_t P2_id;
@@ -262,7 +301,7 @@ public:
 	individual() {
 		P1=-1;
 		P2=-1;
-		z=0.0;
+		memset(z, 0, TRAITS*sizeof(double) );
 //		id=++ID;
 //		P1_id=0;
 //		P2_id=0;
@@ -320,7 +359,27 @@ initR (uint32_t ***Rand,const size_t & N, const size_t & t, std::mt19937 &mt)
 	} 
 //	std::cerr << "BYE!\n";
 }
-/*These are all cribbed from Cockerham and Weir 1984.*/
+
+double get_h(uint32_t **Results, 
+	const size_t &generation_size,
+	const uint32_t &Z)
+{
+	double H=0;
+	const uint32_t MASK[LOCI]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
+					0x00000010,	0x00000020,	0x00000040,	0x00000080,
+					0x00000100,	0x00000200,	0x00000400, 	0x00000800,	
+					0x00001000, 	0x00002000, 	0x00004000, 	0x00008000,
+					0x00010000,	0x00020000,	0x00040000,	0x00080000,
+					0x00100000,	0x00200000,	0x00400000,	0x00800000,
+					0x01000000,	0x02000000,	0x04000000, 	0x08000000,	
+					0x10000000, 	0x20000000, 	0x40000000, 	0x80000000};
+	{
+		for (size_t y=0; y<generation_size; ++y){
+			H+=( (Results[0][y] & MASK[Z])!=(Results[1][y] & MASK[Z]) );
+		}
+	}
+	return H/double(generation_size);
+}
 
 double get_freq(uint32_t **Results, 
 	const size_t &generation_size,
@@ -344,39 +403,52 @@ double get_freq(uint32_t **Results,
 }
 
 
+/*These were all initially cribbed from Cockerham and Weir 1984.*/
+/*But I made some changes. Not sure if they reflect the right thing anymore*/
 double get_genome_thingies(uint32_t **ind, 
 	const size_t &generation_size, double a, double d)
 {
 
 	double p, q, f=0;
 	double alpha;
-	double delta;
+	double delta, z_hat;
 
-	double sigma_A=0., sigma_D=0., sigma_ADI=0., sigma_DI=0.;
+	double sigma_A=0., sigma_D=0., sigma_ADI=0., sigma_DI=0., sigma_z=0, f_hat=0, f2=0, N=0;
 
 	for (uint8_t Z=0; Z<LOCI; Z++)
 	{
 		p=get_freq(ind, generation_size, Z);
 		q=1.-p;
-		if (p!=0){
+		if (p!=0 && q!=0){
+			f=1.-get_h(ind, generation_size, Z)/(2.*p*q);
 			alpha=a+d*(q-p);
-//			alpha=q*(a+d*(q-p) );
-			delta=2*p*q*d*f;
 		
 			// sigma_A_2
-			sigma_A+=2.*p*q*pow(alpha, 2);
+			sigma_A+=2.*p*q*pow(alpha, 2)*(1+f);
 
 			// sigma_D_2
-			sigma_D+=pow(2*p*q*d, 2);
+			sigma_D+=4*pow(d,2)*p*q*(p*q+f*pow(1-2*p, 2) );
 
 			// H_2
-			sigma_ADI+=4*alpha*d*(pow(p,3)*q-pow(q,3)*p);
+			sigma_ADI+=4*alpha*d*(pow(p,3)*q-pow(q,3)*p)*f;
 
 			// D1_2
-			sigma_DI+=4*pow(alpha,2)*(pow(q,2)*p+pow(p,2)*q);
+			sigma_DI+=pow(-2*d*p*q*f, 2);
+			f_hat+=f;
+			f_hat+=f;
+			f2+=pow(f, 2);
+			N+=1;
+			z_hat=(-a)*(pow(p, 2)+p*q*f)+
+				(d)*2*p*q*(1-f)+
+				(a)*(pow(q, 2)+p*q*f);
+		//	std::cerr << z_hat << ", " << -a-z_hat << ", " << d-z_hat << ", " << a-z_hat << std::endl;
+			sigma_z+=pow(-a-z_hat, 2)*(pow(p, 2)+p*q*f)+
+				 pow(d-z_hat, 2)*2*p*q*(1-f)+
+				 pow(a-z_hat, 2)*(pow(q, 2)+p*q*f);
 		}
 	}
-	std::cerr << sigma_A << ", " << sigma_D << ", " << sigma_ADI << ", " << sigma_DI << std::endl;
+	std::cerr << "s_A, s_D, s_ADI, s_DI, s_z (e), f_hat, f_var" << std::endl;
+	std::cerr << sigma_A << ", " << sigma_D << ", " << sigma_ADI << ", " << sigma_DI << ", " << sigma_z << "(" << sigma_A+sigma_D+2*sigma_ADI-sigma_DI << ")" <<  ", " << f_hat/N << ", " << (f2-pow(f_hat, 2)/N)/N<<std::endl;
 	return 0;
 }
 
@@ -536,7 +608,9 @@ print_ped(individual *descendents[],
 	{
 		for (size_t x=0; x<generation_size; ++x)
 		{
-			out << g << '\t' << x+(g+1)*generation_size << '\t' << ind->P1+g*generation_size << '\t' << ind->P2+g*generation_size << '\t' << 3 << '\t' << ind->z << std::endl;
+			out << g << '\t' << x+(g+1)*generation_size << '\t' << ind->P1+g*generation_size << '\t' << ind->P2+g*generation_size << '\t' << 3;
+			for (size_t tz=0; tz<TRAITS; ++tz) out << '\t' << ind->z[tz];
+			out << std::endl;
 			++ind;
 		}
 	}
@@ -786,11 +860,11 @@ main(int argc, char *argv[] )
 	std::uniform_int_distribution<int> rN(0, N-1);
 	std::poisson_distribution<int> poisson(double(N)*pi*4.);
 #endif
-	std::cerr << argc << std::endl;
+	//std::cerr << argc << std::endl;
 	if (argc==13) make_subdivided(&descendents, N, N2, t, t1, t2, mt);
 	else if (argc==12) make_change(&descendents, N, t, t1, t2, mt);
 	else {
-		std::cerr << argc << std::endl;
+		//std::cerr << argc << std::endl;
 		make(&descendents, N, t, mt, type);
 	}
 
@@ -805,8 +879,11 @@ main(int argc, char *argv[] )
 		for (size_t x=0; x<N; ++x)
 		{
 			Pstate[0][x]=0x00000000;
-		//	Pstate[1][x]=0xFFFFFFFF;
+#ifdef MUT
 			Pstate[1][x]=0x00000000;
+#else
+			Pstate[1][x]=0xFFFFFFFF;
+#endif
 		};
 
 		thisR=Rstate;
@@ -821,7 +898,10 @@ main(int argc, char *argv[] )
 #else
 				this_generation[x].update(mt, Pstate, Ostate, x);
 #endif
-				if (K<1) this_generation[x].z=inc(this_generation[x].z,*(Ostate[0]+x),*(Ostate[1]+x), a, d);
+				//if (K<100) 
+				size_t tz=(K*TRAITS)/k;
+				//std::cerr << tz << std::endl;
+				this_generation[x].z[tz]=inc(this_generation[x].z[tz],*(Ostate[0]+x),*(Ostate[1]+x), a, d);
 			}
 #ifdef MUT
 			mutate(Ostate[0], r32, rN, poisson, mt);
@@ -859,6 +939,7 @@ main(int argc, char *argv[] )
 
 	this_generation-=N;
 	
+// TODO WARNING WARNING WARNING!!! These are based of non-causitive loci, so they are at best a guess of the correct results....
 	get_genome_thingies(Results, N, a, d);
 	
 	delete [] descendents;

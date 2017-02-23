@@ -1,0 +1,142 @@
+
+make_K <- function(n, d){
+	return (cbind(diag(rep(1,n) )[ , c( (d+1):n)], diag(rep(1, n) )[ , c(1:d)]))
+}
+
+#crossSum <- function(v){
+#	M<-matrix(
+#	return (cbind(diag(rep(1,n) )[ , c( (d+1):n)], diag(rep(1, n) )[ , c(1:d)]))
+#}
+
+mapgd <- readLines("../analysis_files/mapgd_relatedness.out")
+mapgd <- mapgd[-1]
+mapgd <- mapgd[-1]
+mapgd <- head(mapgd,-1)
+mapgd <- read.csv(textConnection(mapgd), sep="	", header=FALSE)
+mapgd[1:2,]
+
+pheno<-read.csv("../analysis_files/plink.pheno", sep="	", header=FALSE)
+#pheno<-rbind(r[,6:1005])
+#pheno$V3<-r$V3
+#for (i in 0:length(pheno$V3) )
+#{
+#	pheno$V3[i]<-sum(pheno[i,1:999])
+#}
+contrast<-c()
+
+meanW<-mean(pheno$V3)
+varW<-var(pheno$V3)
+
+#f<-c()
+#for (x in 0:length(pheno$V3) )
+#{
+#	Fs<-c()
+#	for (y in 1:length(mapgd$V1) )
+#	{
+#		if (mapgd[y,]$V1==x) Fs<-c(Fs, mapgd[y,]$V3)
+#		if (mapgd[y,]$V2==x) Fs<-c(Fs, mapgd[y,]$V5)
+#	}
+#	f<-c(f, mean(Fs) )
+#}
+#summary(lm(pheno$V3 ~ f[1:length(pheno$V3)] ))
+
+for (x in 1:(length(pheno$V3)) )
+{
+	if (x<length(pheno$V3)) {
+		for (y in (x+1):(length(pheno$V3) ) )
+		{
+			contrast<-c(contrast, (pheno$V3[x]-meanW)*(pheno$V3[y]-meanW)/(2*varW) )
+		}
+	}
+}
+
+#pdf("contrast.pdf")
+plot(contrast[1:length(mapgd$V7)], mapgd$V7)
+map<-c()
+map$theta<-mapgd$V7
+#map$gamma<-mapgd$V9+mapgd$V11
+map$delta<-mapgd$V13
+map$Delta<-mapgd$V15
+summary<-lm(contrast[1:length(map$theta)] ~ map$theta+map$delta+map$Delta+0)
+#summary<-lm(contrast[1:length(map$theta)] ~ map$theta+0)
+
+plot(map$theta, map$Delta)
+plot(map$delta, map$Delta)
+plot(map$theta, map$delta)
+N<-length(pheno$V3)
+
+A<-matrix(nrow=N,ncol=N)
+d<-matrix(nrow=N,ncol=N)
+D<-matrix(nrow=N,ncol=N)
+
+f<-3
+
+for (i in 1:(length(mapgd$V1)+1))
+{
+	x<-mapgd[i,]
+	A[x$V1+1, x$V2+1]<-x$V7
+	A[x$V2+1, x$V1+1]<-x$V7
+	A[x$V1+1, x$V1+1]<-1
+	A[x$V2+1, x$V2+1]<-1
+#	if(x$V2+1==f) { A[x$V1+1, x$V1+1]<-x$V7 }
+#	if(x$V1+1==f) { A[x$V2+1, x$V2+1]<-x$V7 }
+
+	d[x$V1+1, x$V2+1]<-x$V13
+	d[x$V2+1, x$V1+1]<-x$V13
+	d[x$V1+1, x$V1+1]<-1
+	d[x$V2+1, x$V2+1]<-1
+
+	D[x$V1+1, x$V2+1]<-x$V15
+	D[x$V2+1, x$V1+1]<-x$V15
+	D[x$V1+1, x$V1+1]<-1
+	D[x$V2+1, x$V2+1]<-1
+}
+
+z<-pheno$V3-mean(pheno$V3)
+s<-z %*% t(z)
+
+sigma_A=mean(s*A)/mean(A*A)/2
+sigma_D=mean(s*D)/mean(D*D)/2
+sigma_E=0#tr(solve(V))#
+sigma_DI=mean(s*d)/mean(d*d)/2 
+sigma_A
+sigma_D
+sigma_DI
+var(z)
+sigma_DI=0#mean(Z/d)/all.moments(z, order=4, centeral=TRUE) 
+sigma_E=0#
+
+#q<-rowSums(A %*% diag(1/z)*var(z), 2)
+
+R<-diag(N)*sigma_E
+G<-A*sigma_A
+Z<-diag(N)
+V=Z %*% G %*% t(Z)+R
+
+
+#sigma_A=sum(diag(solve(V)%*% A  ))#mean(s*A)/mean(A*A)/2
+#sigma_E=sum(diag(solve(V) ) )#mean(s*A)/mean(A*A)/2
+#sigma_A
+#sigma_E
+z_hat<-c()
+z_hat2<-c()
+for (x in 1:length(z) ){
+	u=A[x,]
+	z_p<-z[-x]-mean(z[-x])
+	z_hat<-c(z_hat, t(z[-x]) %*% solve(A[-x, -x]) %*% u[-x] *2)
+	z_hat2<-c(z_hat2, t(z_p) %*% solve(A[-x, -x]) %*% u[-x] *2)
+}
+plot(z_hat, z)
+plot(z_hat2, z)
+#summary(summary)
+
+#
+#z[2]
+#pheno$V3[2]
+#z_hat[2]
+
+#dev.off()
+
+#for (l in 1:1000){
+#v<-var(r[,C])
+#}

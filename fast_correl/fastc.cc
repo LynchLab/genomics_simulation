@@ -102,7 +102,6 @@ std::istream *in=&std::cin;
 //std::cerr << "AT" << *bit << std::endl;
 uint32_t readed=0;
 
-
 while(in->read((char *)(*bit), BLOCK_SIZE*sizeof(uint32_t) ) )
 {
 	//std::cerr << "IN" << *bit << std::endl;
@@ -186,7 +185,6 @@ while(in->read((char *)(*bit), BLOCK_SIZE*sizeof(uint32_t) ) )
 }
 
 std::cout << "x dist c1 c2 Den rho1 OX OY rho2\n";
-
 
 for (size_t x=0; x<XMAX; x++)
 {

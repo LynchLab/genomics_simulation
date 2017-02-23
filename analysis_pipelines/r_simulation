@@ -1,0 +1,22 @@
+N<-500
+e<-matrix(rnorm(N, mean = 0, sd = 5), ncol=1, nrow=N)
+Vr<-matrix( c(runif(N*N, -0.1, 0.1)) , ncol=N, nrow=N)
+Vr<-Vr+diag(1, N)
+for (i in 1:N) Vr[i,]<-Vr[i,]/sum(Vr[i,])
+V<-Vr %*% t(Vr)
+
+p<-matrix(rnorm(N, mean = 0, sd = 1), ncol=1, nrow=N)
+a<-Vr %*% p
+z<-a
+z<-z-mean(z)
+#R<-diag(1, N)#matrix( c(rnorm(N*N)^2 ), ncol=N, nrow=N)
+A<-V
+z_hat<-c()
+for (x in 1:length(z) ){
+        u=A[x,][-x]
+	z_p<-z[-x]-mean(z[-x])
+	#solve(t(u) %*% u) %*% t(u) %*% z_p
+        z_hat<-c(z_hat, t(z_p) %*% solve(A[-x,-x] ) %*% u )
+}
+summary(lm(z_hat~z) )
+
