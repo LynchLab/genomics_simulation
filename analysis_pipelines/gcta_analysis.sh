@@ -1,19 +1,18 @@
 gunzip ../sequences/pedigree.txt.gz
 TARGET=`tail -1 ../sequences/pedigree.txt | cut -d '	' -f 1`
 SIZE=`grep -c ^$TARGET ../sequences/pedigree.txt`
-python ../make_fam.py ../sequences/pedigree.txt | tail -n $SIZE |  sed 's/-9/-9.01/' > ../analysis_files/plink.fam
-cat ../analysis_files/plink.fam | cut -d '	' -f 1,2,6 > ../analysis_files/plink.pheno
+#python ../make_fam.py ../sequences/pedigree.txt | tail -n $SIZE |  sed 's/-9/-9.01/' > ../analysis_files/plink.fam
+#cat ../analysis_files/plink.fam | cut -d '	' -f 1,2,6 > ../analysis_files/plink.pheno
 gzip ../sequences/pedigree.txt
 
-rm -rf gatk_calls.vcf.gz
-gunzip ../analysis_files/gatk_calls.vcf.gz
-plink --vcf ../analysis_files/gatk_calls.vcf --pheno ../analysis_files/plink.pheno --make-bed --allow-extra-chr --out ../analysis_files/plink
-gzip ../analysis_files/gatk_calls.vcf
+rm -rf states.vcf
+gunzip ../analysis_files/states.vcf.gz
+plink --vcf ../analysis_files/states.vcf --make-bed --allow-extra-chr --out ../analysis_files/plink
+gzip ../analysis_files/states.vcf
 
 gcta64 --bfile ../analysis_files/plink --make-grm-gz --out ../analysis_files/gcta
 gcta64 --bfile ../analysis_files/plink --make-grm --out ../analysis_files/gcta
-gcta64 --grm ../analysis_files/gcta --pheno ../analysis_files/plink.pheno --reml --out ../analysis_files/test --thread-num 10
-
+gcta64 --grm ../analysis_files/gcta --pheno ../analysis_files/plink.pheno --reml --out ../analysis_files/test --thread-num 10 --grm-cutoff 0.125 --reml-pred-rand
 
 # --reml-pred-rand
 #

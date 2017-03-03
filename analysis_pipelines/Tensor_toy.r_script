@@ -1,0 +1,23 @@
+'%o%' <- function(x,y) x %*% t(y) 
+'%i%' <- function(x,y) t(x) %*% y 
+
+p<-0.8
+q<-1-p
+
+m_x<-matrix( c(p, q), ncol=1, nrow=2)
+p_x<-matrix( c(p, q), ncol=1, nrow=2)
+
+m_y<-matrix( c(p, q), ncol=1, nrow=2)
+p_y<-matrix( c(p, q), ncol=1, nrow=2)
+
+f_x<-0
+f_y<-0
+t_xy<-0
+g_xy<-0
+g_yx<-0
+d_xy<-0
+D_xy<-0
+
+G<-m_x %*% t(m_y) %*% t(p_x) %*% p_y
+
+#G<-m_x %o% m_y %o% p_x %o% p_y

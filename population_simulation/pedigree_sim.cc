@@ -8,11 +8,11 @@
 #include <omp.h>
 #include <iomanip>
 
-//#define REC
+#define REC
 #define MUT
 
 #define LOCI	32
-#define TRAITS	1
+//#define TRAITS	1000
 
 
 void random_mating(uint32_t *P1,  uint32_t *P2, const size_t &size)
@@ -192,7 +192,6 @@ class Gcounter {
 		if (N--!=0) return false;
 		else {
 			N=(*geom)(*mt);
-//			std::cerr << "N:" << N << std::endl;
 			return true;
 		}
 //		return false;
@@ -211,11 +210,12 @@ void mutate (uint32_t *ind, std::uniform_int_distribution<int> &r32, std::unifor
 				0x10000000, 	0x20000000, 	0x40000000, 	0x80000000};
 
 	int mut_num=poisson(mt);
-//	std::cerr << "M:" << mut_num << std::endl;
 	for (size_t x=0; x<mut_num; ++x){
 		ind[randN(mt)]^=(MASK[r32(mt)]);
 	}
 }
+
+int N_REC;
 
 void
 recombine2 (uint32_t *recs, uint32_t *r_end, std::uniform_int_distribution<int> &r32, Gcounter &gcounter, std::mt19937 &mt)
@@ -241,8 +241,12 @@ recombine2 (uint32_t *recs, uint32_t *r_end, std::uniform_int_distribution<int> 
 	uint32_t *r=recs;
 	while (r!=r_end){
 		if( gcounter.draw() ) {
-			if (*r & 0x80000000) *r=(MASK[r32(mt)]);
-			else *r=~MASK[r32(mt)];
+			if (*r & 0x80000000) {
+				*r=(MASK[r32(mt)]);
+			}
+			else {
+				*r=~MASK[r32(mt)];
+			}
 		} else {
 			if (*r & 0x80000000) *r=0xFFFFFFFF;
 			else *r=0;
@@ -284,7 +288,7 @@ private:
 	static uint32_t ID;
 public:
 	uint32_t P1, P2;
-	double z[TRAITS];
+//	double z[TRAITS];
 //	uint32_t id;
 //	uint32_t P1_id;
 //	uint32_t P2_id;
@@ -301,7 +305,7 @@ public:
 	individual() {
 		P1=-1;
 		P2=-1;
-		memset(z, 0, TRAITS*sizeof(double) );
+//		memset(z, 0, TRAITS*sizeof(double) );
 //		id=++ID;
 //		P1_id=0;
 //		P2_id=0;
@@ -603,13 +607,13 @@ print_ped(individual *descendents[],
 	std::ostream &out)
 {
 	individual *ind=descendents[0];
-	out << "Time" << '\t' << "Individual ID" << '\t' << "Paternal ID" << '\t' << "Maternal ID" << '\t' << "Sex" << '\t' <<  "z" << std::endl;
+	out << "Time" << '\t' << "Individual ID" << '\t' << "Paternal ID" << '\t' << "Maternal ID" << '\t' << "Sex\n"; //<< '\t' <<  "z" << std::endl;
 	for (size_t g=0; g<simulation_length; ++g)
 	{
 		for (size_t x=0; x<generation_size; ++x)
 		{
 			out << g << '\t' << x+(g+1)*generation_size << '\t' << ind->P1+g*generation_size << '\t' << ind->P2+g*generation_size << '\t' << 3;
-			for (size_t tz=0; tz<TRAITS; ++tz) out << '\t' << ind->z[tz];
+			//for (size_t tz=0; tz<TRAITS; ++tz) out << '\t' << ind->z[tz];
 			out << std::endl;
 			++ind;
 		}
@@ -773,10 +777,10 @@ main(int argc, char *argv[] )
 
 	mt.seed(time(NULL));
 
-	if (not(argc==10 ||argc==12 ||  argc==13)) {
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <a> <d>\n";
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <a> <d> <t1> <t2>\n";
-		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <a> <d> <t1> <t2> <N2>\n";
+	if (not(argc==8 ||argc==10 ||  argc==11)) {
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out>\n";
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <t1> <t2>\n";
+		std::cerr << argv[0] << " <Number of individual> <Number of generations> <Number of loci/8> <r> <pi> <mating_system> <out> <t1> <t2> <N2>\n";
 		return 0;
 	}
 
@@ -785,29 +789,26 @@ main(int argc, char *argv[] )
 	size_t t=atoi(argv[2]);
 	size_t k=atoi(argv[3]);
 
-	double r=atof(argv[4]);
-	double pi=atof(argv[5]);
+	double r=atof(argv[4])/double(k*2);	//recombination events per individual per generation
+	double pi=atof(argv[5]);		//equalibrium diversity
 
 	char type=argv[6][0];
 	char type2=argv[7][0];
 	bool binary=(type2=='b');
 
-	double a=atof(argv[8]);
-	double d=atof(argv[9]);
-
 	size_t t1;//=atoi(argv[4]);
 	size_t t2;//=atoi(argv[5]);
 	size_t N2;//=ato
 
-	if (argc==12) {
-		t1=atoi(argv[10]);
-		t2=atoi(argv[11]);
+	if (argc==10) {
+		t1=atoi(argv[8]);
+		t2=atoi(argv[9]);
 	}
 
-	if ( argc==13) {
-		t1=atoi(argv[10]);
-		t2=atoi(argv[11]);
-		N2=atoi(argv[12]);
+	if ( argc==11) {
+		t1=atoi(argv[8]);
+		t2=atoi(argv[9]);
+		N2=atoi(argv[10]);
 	}
 
 	std::fstream header;
@@ -837,10 +838,12 @@ main(int argc, char *argv[] )
 //	Results[1]=new uint_fast32_t[N*k];
 	Results[0]=new uint32_t[N];
 	Results[1]=new uint32_t[N];
-	
+
+	N_REC=0;	
 
 	// [0]->N [1]->N ](t) **t,2,N
 #ifdef REC
+	std::cerr << r << std::endl;
 	std::uniform_int_distribution<int> r32(0,31);
 	std::uniform_int_distribution<int> r10(0,20);
 	Gcounter gcounter(mt, r);
@@ -899,9 +902,9 @@ main(int argc, char *argv[] )
 				this_generation[x].update(mt, Pstate, Ostate, x);
 #endif
 				//if (K<100) 
-				size_t tz=(K*TRAITS)/k;
-				//std::cerr << tz << std::endl;
-				this_generation[x].z[tz]=inc(this_generation[x].z[tz],*(Ostate[0]+x),*(Ostate[1]+x), a, d);
+//				size_t tz=(K*TRAITS)/k;
+//				//std::cerr << tz << std::endl;
+//				this_generation[x].z[tz]=inc(this_generation[x].z[tz],*(Ostate[0]+x),*(Ostate[1]+x), a, d);
 			}
 #ifdef MUT
 			mutate(Ostate[0], r32, rN, poisson, mt);
@@ -929,9 +932,9 @@ main(int argc, char *argv[] )
 //	print_results3(std::cout, k, N, Results);
 
 	std::fstream pedigree;
-	pedigree.open ("pedigree.txt", std::fstream::out);
-	print_ped(&descendents, N, t, pedigree);
-	pedigree.close();
+//	pedigree.open ("pedigree.txt", std::fstream::out);
+//	print_ped(&descendents, N, t, pedigree);
+//	pedigree.close();
 
 	pedigree.open ("name-file.txt", std::fstream::out);
 	print_names(N, t, pedigree);
@@ -939,9 +942,9 @@ main(int argc, char *argv[] )
 
 	this_generation-=N;
 	
-// TODO WARNING WARNING WARNING!!! These are based of non-causitive loci, so they are at best a guess of the correct results....
-	get_genome_thingies(Results, N, a, d);
-	
+// TODO WARNING WARNING WARNING!!! These are based off non-causitive loci, so they are at best a guess of the correct results....
+//	get_genome_thingies(Results, N, a, d);
+
 	delete [] descendents;
 
 	delete [] Pstate[0];

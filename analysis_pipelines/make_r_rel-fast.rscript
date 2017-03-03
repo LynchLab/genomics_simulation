@@ -14,10 +14,6 @@ N<-length(pheno$V3)
 
 z<-matrix(pheno$V3, ncol=1, nrow=N)
 
-meanZ<-mean(z)
-varZ<-var(z)
-
-z<-(z-mean(z))
 
 A<-matrix(nrow=N,ncol=N)
 G<-matrix(nrow=N,ncol=N)
@@ -34,23 +30,20 @@ for (i in 1:(length(mapgd$V1)+1))
 	A[x$V1+1, x$V1+1]<-(1+x$V3)/2.
 	A[x$V2+1, x$V2+1]<-(1+x$V5)/2.
 
-	DEV1=1#z[x$V1+1]/sd(z)
-	DEV2=1#z[x$V2+1]/sd(z)
+	d[x$V1+1, x$V2+1]<-x$V13
+	d[x$V2+1, x$V1+1]<-x$V13
+	d[x$V1+1, x$V1+1]<-x$V3
+	d[x$V2+1, x$V2+1]<-x$V5
 
-	d[x$V1+1, x$V2+1]<-x$V13*DEV1*DEV2
-	d[x$V2+1, x$V1+1]<-x$V13*DEV1*DEV2
-	d[x$V1+1, x$V1+1]<-x$V3*DEV1*DEV1
-	d[x$V2+1, x$V2+1]<-x$V5*DEV2*DEV2
+	D[x$V1+1, x$V2+1]<-x$V15
+	D[x$V2+1, x$V1+1]<-x$V15
+	D[x$V1+1, x$V1+1]<-1-x$V3
+	D[x$V2+1, x$V2+1]<-1-x$V5
 
-	D[x$V1+1, x$V2+1]<-x$V15*DEV1*DEV2
-	D[x$V2+1, x$V1+1]<-x$V15*DEV1*DEV2
-	D[x$V1+1, x$V1+1]<-1-x$V3*DEV1*DEV1
-	D[x$V2+1, x$V2+1]<-1-x$V5*DEV2*DEV2
-
-	G[x$V1+1, x$V2+1]<-x$V11*DEV1+x$V13*DEV2
-	G[x$V2+1, x$V1+1]<-x$V13*DEV2+x$V11*DEV1
-	G[x$V1+1, x$V1+1]<-x$V3*DEV1*2
-	G[x$V2+1, x$V2+1]<-x$V5*DEV2*2
+	G[x$V1+1, x$V2+1]<-x$V11+x$V13
+	G[x$V2+1, x$V1+1]<-x$V13+x$V11
+	G[x$V1+1, x$V1+1]<-x$V3
+	G[x$V2+1, x$V2+1]<-x$V5
 
 	F[x$V1+1, x$V2+1]<-x$V3
 	F[x$V2+1, x$V1+1]<-x$V5
@@ -63,14 +56,21 @@ for (i in 1:N)
 	f[i]<-mean(F[i,], na.rm=TRUE)
 }
 
-coef<-lm(z~f+0)$coef
-
-sf<-coef[1]
-
 uncentered_z<-z
-z<-z-f*sf
+z<-z-mean(z)
+
+zf<-z*f
+zf_c<-z*(1-f)
+
+coef<-lm(z~f)$coef
+sf<-coef[1]
+z<-z-sf*f
+z<-z-mean(z)
 
 s<-z %*% t(z)
+
+sf<-zf %*% t(zf)
+sf_c<-zf_c %*% t(zf_c)
 
 us<-s
 uA<-A
@@ -92,27 +92,31 @@ uD<-as.vector(uD)
 uG<-as.vector(uG)
 
 coef<-lm(us~uA+ud+uD+uG+0)$coef
-#/var(z)
+#sd(z)
+#coef<-lm(us~uA+ud+uD+uG)$coef
 
 sA<-coef[1]
 sid<-coef[2]
 sD<-coef[3]
 sG<-coef[4]
 
-V<-A*sA#+d*sid+D*sD+G*sG
+A<-A*sA
+d<-d*sid
+D<-D*sD
+G<-G*sG
+V<-A+d+D+G
 
 z_hat<-c()
-z_hat2<-c()
+a_hat<-c()
+d_hat<-c()
 for (x in 1:length(z) ){
 	u=V[x,]
 	z_p<-z[-x]-mean(z[-x])
-	z_hat<-c(z_hat, t(z[-x]) %*% solve(V[-x, -x]) %*% u[-x] *2)
-	z_hat2<-c(z_hat2, t(z_p) %*% solve(V[-x, -x]) %*% u[-x] *2)
+	z_hat<-c(z_hat, t(z_p) %*% solve(t(V[-x, -x])) %*% u[-x] *2)
+	a_hat<-c(a_hat, t(z_p) %*% solve(t(A[-x, -x])) %*% u[-x] *2)
+	d_hat<-c(d_hat, t(z_p) %*% solve(t(D[-x, -x])) %*% u[-x] *2)
 }
 
 plot(z_hat, z)
-plot(z_hat2, z)
-
 summary(lm(z~z_hat) )
-summary(lm(z~z_hat2) )
 

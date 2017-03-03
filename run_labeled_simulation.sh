@@ -1,33 +1,33 @@
 #!/bin/bash
 
-POPULATION=400
+POPULATION=5000
 POP2=$((POPULATION/2))
-SAMPLE=400
-TIME=$((2*POPULATION))
+SAMPLE=5000
+TIME=$((1*POPULATION))
 TIMEX=$((9*PULATION+POPULATION/2))
 REF="reference.fa"
-COV=10
-K=2000
-SIZE=$(($K*1000)) #make sure to use bwa mem when snp densities gt ~1:32
-SNPS=$(($K*10))
-
-echo "simulating reference"
-python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
-python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/$REF
-#cp ./real_genomes/S288C_Chromosome\ I.fsa ./sequences/$REF
+COV=30
+K=1000
+SIZE=$(($K*640)) 	#make sure to use bwa mem!!
+SNPS=$(($K*10))  
 
 echo "simulating population"
 cd sequences
 #../population_simulation/non_pedigree_sim $POPULATION $SNPS t 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
 #../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.002 0.002 s b 1 0.5 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
-../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.0 0.01 s b 1 -1 10 20 200 2> var > states.txt
+../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 50 0.01 s b 2> var | gzip - > states.txt.gz
 cat name-file.txt | cut -d '	' -f 1-$((SAMPLE+2)) > name-file2.txt
 mv name-file2.txt name-file.txt
 rm -rf pedigree.txt.gz
 gzip pedigree.txt
 cd ..
 
-exit 
+exit
+
+echo "simulating reference"
+python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
+python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/$REF
+#cp ./real_genomes/S288C_Chromosome\ I.fsa ./sequences/$REF
 
 echo "making individual genomes"
 cd variant_simulation
