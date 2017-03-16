@@ -8,7 +8,7 @@
 #include <omp.h>
 #include <iomanip>
 
-#define REC
+//#define REC
 #define MUT
 
 #define LOCI	32
@@ -153,6 +153,52 @@ void mating_vector(uint32_t *P1,  uint32_t *P2, double probs[5], double *coances
 		co-=mean;
 	}
 }*/
+
+
+class Face {
+	private:
+	std::vector <size_t > members;
+	public:
+	set_range(size_t from, size_t to)
+	{
+		
+	}
+}
+
+class Geodesic {
+        std::vector<uint32_t> 
+	private:
+	std::vector <Face> faces;
+	public:
+	Geodesic (size_t nfaces, size_t nind)
+	{
+		if (nfaces>nind)
+		{
+			std::cerr << __FILE__ << ":" __LINE__ << " number of individuals must be equalt or greater than number of faces.";
+		}
+		size_t N=nfaces/nind;
+		size_t R=nfaces%nid;
+		faces.resize(nfaces);
+		for (int x=0; x<nfaces-1; x++){
+			faces[x].set_range(N, N++);
+		}
+		faces[nfaces-1].set_range(N, N+R);
+	}
+	get(size_t x)
+	{	
+		
+	}
+}
+
+void geodesic_mating(uint32_t *P1,  uint32_t *P2, const size_t &size, Geodesic &geodesic)
+{
+        for (size_t x=0; x<size; ++x)
+        {
+                P1[x]=gedesic.get(x);
+                P2[x]=gedesic.get(x);
+        }
+}
+
 
 void print_head(std::ostream &out, const int &length)
 {
