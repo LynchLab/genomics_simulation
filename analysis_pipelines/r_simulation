@@ -1,22 +1,142 @@
-N<-500
-e<-matrix(rnorm(N, mean = 0, sd = 5), ncol=1, nrow=N)
-Vr<-matrix( c(runif(N*N, -0.1, 0.1)) , ncol=N, nrow=N)
-Vr<-Vr+diag(1, N)
-for (i in 1:N) Vr[i,]<-Vr[i,]/sum(Vr[i,])
-V<-Vr %*% t(Vr)
+library(expm)
+##########################################################
+# Generating a random positive-definite matrix with user-specified positive eigenvalues
+# If eigenvalues are not specified, they are generated from a uniform distribution
+Posdef <- function (n, ev = runif(n, 0, 10)) 
+{
+	Z <- matrix(ncol=n, rnorm(n^2))
+	decomp <- qr(Z)
+	Q <- qr.Q(decomp) 
+	R <- qr.R(decomp)
+	d <- diag(R)
+	ph <- d / abs(d)
+	O <- Q %*% diag(ph)
+	Z <- t(O) %*% diag(ev) %*% O
+	return(Z)
+}
+
+join <- function(matricies)
+{
+	nmatrix<-length(matricies)
+	rnm<-sqrt(nmatrix)
+	msize<-nrow(matricies[[1]])
+	fsize<-rnm*msize
+	q<-msize*nmatrix
+	ret<-matrix( c(rep(0, q) ), ncol=fsize, nrow=fsize) 
+	col<-0
+	row<-0
+	for (X in 0:(rnm-1))
+	{
+		for (Y in 0:(rnm-1))
+		{
+			m<-matricies[[X*rnm+Y+1]]
+			for (x in 1:msize)
+			{
+				for (y in 1:msize)
+				{
+					ret[X*msize+x,Y*msize+y]<-m[x,y]
+				}
+			}
+		}
+	}
+	return(ret) 
+}
+
+Rot <- function(angle){
+	t<-angle[1]
+	u_x<-z_hat[1]
+	u_y<-z_hat[2]
+	u_z<-z_hat[3]
+	Rmatrix<-matrix(c(cos(t)+u_x^2*(1-cos(t)), 	u_x*u_y*(1-cos(t) )-u_z*sin(t),	u_x*u_z*(1-cos(t) )+u_y*sin(t), u_y*u_x*(1-cos(t))+u_z*sin(t),	cos(t)+u_y^2*(1-cos(t) ), u_y*u_z*(1-cos(t) )-u_x*sin(t), u_z*u_x*(1-cos(t))-u_y*sin(t), u_z*u_y*(1-cos(t) )+u_x*sin(t), cos(t)+u_z^2*(1-cos(t) ) ), ncol=3, nrow=3)
+	return (Rmatrix)
+}
+
+#transform <- function{
+#	
+#}
+Set_rot <- function (axis) {
+	N<-length(axis)
+	basis<<-gramSchmidt(matrix(c(axis, diag(N)[,2:N] ), ncol=N, nrow=N) )$Q
+}
+
+Rot_n <-function (angles){
+        dim<-length(angles)+2
+	for (x in 1:dim){
+		alpha=angles[x]
+		a1=x+1
+		a2=x+2
+		basis[,a1]
+		basis[,a2]
+		gii=cos(alpha)
+		gjj=cos(alpha)
+		gji=-sin(alpha)
+		gij=sin(alpha)	
+#			Rmatrix[x,y]<-Rmatrix[x,y]+
+	}
+        return (Rmatrix)
+}
+
+objective<- function (x)
+{
+#	message(x)
+	R_theta<-Rot_n(x)
+	u1<-irA %*% R_theta %*% a_theta
+	u2<-irD %*% R_theta %*% d_theta
+	return(-sum(dnorm( c(u1, u2), mean = 0, sd = 1, log = TRUE) )	)
+#	return (-shapiro.test( c(u1, u2) )$p.value)
+}
+
+true_a<-c()
+guess_line<-c()
+guess_matt<-c()
+
+N<-250
+
+A<-Posdef(N)
+D<-Posdef(N)
+B<-Posdef(N)
+
+A<-A/10
+
+Ar<-sqrtm(A)
+Dr<-sqrtm(D)
+Br<-sqrtm(B)
+
+for (j in 1:1){
 
 p<-matrix(rnorm(N, mean = 0, sd = 1), ncol=1, nrow=N)
-a<-Vr %*% p
-z<-a
-z<-z-mean(z)
-#R<-diag(1, N)#matrix( c(rnorm(N*N)^2 ), ncol=N, nrow=N)
-A<-V
-z_hat<-c()
-for (x in 1:length(z) ){
-        u=A[x,][-x]
-	z_p<-z[-x]-mean(z[-x])
-	#solve(t(u) %*% u) %*% t(u) %*% z_p
-        z_hat<-c(z_hat, t(z_p) %*% solve(A[-x,-x] ) %*% u )
-}
-summary(lm(z_hat~z) )
+a<-Ar %*% p
+p<-matrix(rnorm(N, mean = 0, sd = 1), ncol=1, nrow=N)
+d<-Dr %*% p
+p<-matrix(rnorm(N, mean = 0, sd = 1), ncol=1, nrow=N)
+i<-Br %*% p
 
+a<-a-mean(a)
+d<-d-mean(d)
+z<-a+d
+
+#write(A, "Afile.txt", sep = "\t", append=FALSE, ncol=N)
+#write(D, "Dfile.txt", sep = "\t", append=FALSE, ncol=N)
+#write(z, "zfile.txt", sep = "\t", append=FALSE, ncol=1)
+#system("python-2.7.9 py_opt_breeding.py")
+#py<-read.csv("solfile.txt", sep = "\t")
+
+sigma_a<-sqrt(mean(diag(A)))
+sigma_d<-sqrt(mean(diag(D)))
+rescale<-sqrt(var(z)/ (sigma_a^2+sigma_d^2) )
+sigma_a<-sigma_a*rescale[1]
+sigma_d<-sigma_d*rescale[1]
+
+I<-diag(N)*0
+V<-join(list(I+solve(Ar), I, I, I+solve(Dr) ) )
+Z<-matrix(c(z, z), ncol=1, nrow=2*N)
+sol<-solve(V) %*% Z
+a_hat<-Ar %*% matrix(sol[1:N], ncol=1, nrow=N)
+d_hat<-Dr %*% matrix(sol[(N+1):(N*2)], ncol=1, nrow=N)
+
+true_a<-c(true_a, a)
+guess_line<-c(guess_line, a_hat)
+guess_matt<-c(guess_matt, py$a)
+}
+plot(true_a, guess_line, pch=20)
+points(true_a, guess_matt, pch=20, col="red")

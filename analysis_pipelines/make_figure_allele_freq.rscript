@@ -1,0 +1,10 @@
+v<-read.csv("freq", sep=" ")
+
+source("figures.conf")
+
+pdf("../figures/figure_freq.pdf")
+par(mar=MAR2, family=FONT, font.lab=2)
+
+hist(v$VR_FREQ*400, 400,  cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab="N derived allele", main="Allele frequency spectrum")
+
+dev.off()

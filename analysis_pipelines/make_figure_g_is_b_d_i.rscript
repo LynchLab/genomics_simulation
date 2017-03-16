@@ -1,0 +1,32 @@
+v<-read.csv("../analysis_files/plink.pheno", sep="	", header=FALSE, fill=TRUE, na.strings="NaN")
+
+source("figures.conf")
+
+pdf("../figures/figure_1a.pdf")
+par(mar=MAR2, family=FONT, font.lab=2)
+
+plot(v$V3, v$V4+v$V5+v$V6, lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab="g", ylab=expression(paste(beta, "+" ,delta, "+", iota)), pch=20)
+
+abline(0,1, col=rgb(0,0,0,1), lwd=LINESIZE )
+
+dev.off()
+
+pdf("../figures/figure_1b.pdf")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(v$V5, v$V6, lwd=LINESIZE, cex.lab = LABSIZE, font.lab=2, cex.axis = AXISSIZE, xlab=expression(paste(delta) ), ylab=expression(paste(iota)), pch=20 )
+dev.off()
+
+pdf("../figures/figure_1c.pdf")
+par(mar=MAR2, family=FONT)
+plot(v$V4, v$V5, lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(beta) ), ylab=expression(paste(delta)), pch=20 )
+dev.off()
+
+pdf("../figures/figure_1d.pdf")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(v$V4, v$V6, lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(beta) ), ylab=expression(paste(iota)), pch=20 )
+dev.off()
+
+pdf("../figures/figure_1e.pdf")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(v$V9, v$V6, lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste("f") ), ylab=expression(paste(iota)), pch=20 )
+dev.off()

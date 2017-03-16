@@ -100,13 +100,10 @@ for (i in 1:N)
 uncentered_z<-z
 z<-z-mean(z)
 
-#zf<-z*f
-#zf_c<-z*(1-f)
-
 coef<-lm(z~f)$coef
 sf<-coef[1]
-#z<-z-sf*f
-#z<-z-mean(z)
+zni<-z-sf*f
+zni<-zni-mean(zni)
 
 s<-z %*% t(z)
 

@@ -1,0 +1,14 @@
+v<-read.csv("r_data", sep=" ", header=FALSE, fill=TRUE, na.strings="NaN")
+
+source("figures.conf")
+
+pdf("../figures/figure_1a.pdf")
+par(mar=MAR2, family=FONT, font.lab=2)
+#"α", "β", "γ", "δ", "ε", "ζ", 
+#"η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π", "ρ", 
+#"ς", "σ", "τ", "υ", "φ", "χ", "ψ", "ω", "Α", "Β", "Γ", 
+#"Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ", "Ν", "Ξ", 
+#"Ο", "Π", "Ρ", "Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"
+plot(v$V1, v$V4, lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab="d", ylab=expression(sigma[iota]^2), pch=20)
+
+dev.off()
