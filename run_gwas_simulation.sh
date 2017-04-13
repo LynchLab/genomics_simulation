@@ -27,5 +27,8 @@ zcat ../analysis_files/mapgd_relatedness.out.gz | head -$((POPULATION+1)) | tail
 zcat ../sequences/states.txt.gz | python-2.7.9 -u states_to_pheno_w_inbred.py $POPULATION 0 $SNPS 500 inbred 1 -1 0.0001 > ../analysis_files/plink.pheno
 
 ./gcta_gwas.sh 
+./plink_gwas.sh 
+./mapgd_gwas.sh
+./PRSice.sh
 
 Rscript make_figure_gwas_1.rscript	#Bias RMSE of allele frequenceis

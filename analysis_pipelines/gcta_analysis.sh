@@ -3,12 +3,12 @@ TARGET=`tail -1 ../sequences/pedigree.txt | cut -d '	' -f 1`
 SIZE=`grep -c ^$TARGET ../sequences/pedigree.txt`
 #python ../make_fam.py ../sequences/pedigree.txt | tail -n $SIZE |  sed 's/-9/-9.01/' > ../analysis_files/plink.fam
 #cat ../analysis_files/plink.fam | cut -d '	' -f 1,2,6 > ../analysis_files/plink.pheno
-gzip ../sequences/pedigree.txt
+gzip -f ../sequences/pedigree.txt
 
 rm -rf states.vcf
 gunzip ../analysis_files/states.vcf.gz
 plink --vcf ../analysis_files/states.vcf --make-bed --allow-extra-chr --out ../analysis_files/plink
-gzip ../analysis_files/states.vcf
+gzip -f ../analysis_files/states.vcf
 
 gcta64 --bfile ../analysis_files/plink --make-grm-gz --out ../analysis_files/gcta
 gcta64 --bfile ../analysis_files/plink --make-grm --out ../analysis_files/gcta

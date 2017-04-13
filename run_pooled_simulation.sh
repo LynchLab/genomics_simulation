@@ -57,4 +57,4 @@ cd analysis_pipelines
 
 python get_frequencies.py ../sequences/states.txt ../sequences/polymorphisms.map > ../analysis_files/true_frequencies.csv
 
-Rscript make_figure_2.rscript
+Rscript make_figure_1b.rscript

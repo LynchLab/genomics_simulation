@@ -76,11 +76,6 @@ for (i in 1:(length(mapgd$V1)+1))
 	d[x$V1+1, x$V1+1]<-x$V3
 	d[x$V2+1, x$V2+1]<-x$V5
 
-	D[x$V1+1, x$V2+1]<-x$V15
-	D[x$V2+1, x$V1+1]<-x$V15
-	D[x$V1+1, x$V1+1]<-1-x$V3
-	D[x$V2+1, x$V2+1]<-1-x$V5
-
 	G[x$V1+1, x$V2+1]<-x$V11+x$V13
 	G[x$V2+1, x$V1+1]<-x$V13+x$V11
 	G[x$V1+1, x$V1+1]<-x$V3
@@ -95,6 +90,17 @@ for (i in 1:(length(mapgd$V1)+1))
 for (i in 1:N) 
 {
 	f[i]<-mean(F[i,], na.rm=TRUE)
+}
+
+fm=mean(f)
+
+for (i in 1:(length(mapgd$V1)+1))
+{
+	x<-mapgd[i,]
+	D[x$V1+1, x$V2+1]<-x$V15 + fm *(fm - f[x$V1+1] - f[x$V2+1])
+	D[x$V2+1, x$V1+1]<-x$V15 + fm *(fm - f[x$V1+1] - f[x$V2+1]) 
+	D[x$V1+1, x$V1+1]<-1-f[x$V1+1]+fm*(fm-2*f[x$V1+1])
+	D[x$V2+1, x$V2+1]<-1-f[x$V2+1]+fm*(fm-2*f[x$V2+1])
 }
 
 uncentered_z<-z
@@ -142,7 +148,7 @@ sG<-0.08#coef[4]
 #d<-d*sid
 #D<-D*sD
 #G<-G*sG
-l<-get_comps(A, sA, D, sD, G, sG, d, sid, z)
+l<-get_comps(f, A, sA, D, sD, G, sG, d, sid, z)
 a_hat<-l[[1]]
 d_hat<-l[[2]]
 i_hat<-l[[3]]

@@ -1,33 +1,40 @@
 #!/bin/bash
 
-POPULATION=5000
+POPULATION=432
 POP2=$((POPULATION/2))
-SAMPLE=5000
+SAMPLE=$POPULATION
 TIME=$((1*POPULATION))
 TIMEX=$((9*PULATION+POPULATION/2))
 REF="reference.fa"
-COV=30
-K=1000
+COV=3
+K=100
 SIZE=$(($K*640)) 	#make sure to use bwa mem!!
 SNPS=$(($K*10))  
+REFTYPE='Y'
 
 echo "simulating population"
 cd sequences
 #../population_simulation/non_pedigree_sim $POPULATION $SNPS t 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
 #../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.002 0.002 s b 1 0.5 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
-../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 50 0.01 s b 2> var | gzip - > states.txt.gz
+../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 50 0.01 g t 2> var > states.txt
 cat name-file.txt | cut -d '	' -f 1-$((SAMPLE+2)) > name-file2.txt
 mv name-file2.txt name-file.txt
 rm -rf pedigree.txt.gz
-gzip pedigree.txt
+#gzip pedigree.txt
 cd ..
 
-exit
+case $REFTYPE in
+  [S]   )
+		echo "simulating reference"
+		python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
+		python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/$REF
+		;;
+  [Y]   )
+		echo "using yeast chromosome I"
+		cp ./real_genomes/S288C_Chromosome\ I.fsa ./sequences/$REF
+		;;
+esac
 
-echo "simulating reference"
-python reference_simulation/mutation_simulation2.py -l 24 -S $SIZE > ./sequences/reference_mutations.txt
-python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/$REF
-#cp ./real_genomes/S288C_Chromosome\ I.fsa ./sequences/$REF
 
 echo "making individual genomes"
 cd variant_simulation
@@ -92,6 +99,7 @@ cd analysis_pipelines
 ./bcftools_analysis.sh $REF
 ./angsd_analysis.sh $REF
 ./gatk_analysis.sh $REF
+./plink_analysis.sh $REF
 
 ./gcta_analysis.sh 
 ./gatk_analysis.sh $REF
@@ -99,11 +107,13 @@ cd analysis_pipelines
 
 gunzip ../sequences/states.txt
 python get_frequencies.py ../sequences/states.txt ../sequences/polymorphisms.map > ../analysis_files/true_frequencies.csv
+python get_ld.py ../sequences/states.txt ../sequences/polymorphisms.map 500 > ../analysis_files/true_ld.csv
 gzip ../sequences/states.txt
 
-Rscript make_figure_1a.rscript	#Bias RMSE of allele frequenceis
-Rscript make_figure_1c.rscript	#Bias RMSE of inbreeding
-Rscript make_figure_1d.rscript	#Bias RMSE of LD.
+Rscript Ackerman2017/make_figure_1a.rscript	#Bias RMSE of allele frequenceis
+Rscript Ackerman2017/make_figure_1c.rscript	#Bias RMSE of inbreeding
+Rscript Ackerman2017/make_figure_1d.rscript	#Bias RMSE of LD.
+Rscript Ackerman2017/make_figure_1e.rscript	#ROC.
 
 ./mapgd_benchmark.sh $REF > ../analysis_files/benchmark.csv
 ./bcftools_benchmark.sh $REF >> ../analysis_files/benchmark.csv

@@ -6,9 +6,10 @@
 #include <time.h>
 #include <cstring>
 #include <omp.h>
+#include <healpix_map.h>
 #include <iomanip>
 
-//#define REC
+#define REC
 #define MUT
 
 #define LOCI	32
@@ -155,50 +156,34 @@ void mating_vector(uint32_t *P1,  uint32_t *P2, double probs[5], double *coances
 }*/
 
 
-class Face {
-	private:
-	std::vector <size_t > members;
-	public:
-	set_range(size_t from, size_t to)
-	{
-		
+void make_map_data (arr <int> &data, const int &N) {
+	if (N%12==0) {
+		double d_sqrt = sqrt( N/12 );
+		int i_sqrt = d_sqrt;
+		if ( d_sqrt == i_sqrt ) {
+			data=arr <int> (N);
+			for (int x=0; x<N; x++) data[x]=x;
+			return;
+		} 
 	}
+	std::cerr << "Invalid number of individuals for geometric structure. Try 12*i^2 for any i." << std::endl;
+	exit(0);
 }
 
-class Geodesic {
-        std::vector<uint32_t> 
-	private:
-	std::vector <Face> faces;
-	public:
-	Geodesic (size_t nfaces, size_t nind)
-	{
-		if (nfaces>nind)
-		{
-			std::cerr << __FILE__ << ":" __LINE__ << " number of individuals must be equalt or greater than number of faces.";
-		}
-		size_t N=nfaces/nind;
-		size_t R=nfaces%nid;
-		faces.resize(nfaces);
-		for (int x=0; x<nfaces-1; x++){
-			faces[x].set_range(N, N++);
-		}
-		faces[nfaces-1].set_range(N, N+R);
-	}
-	get(size_t x)
-	{	
-		
-	}
-}
-
-void geodesic_mating(uint32_t *P1,  uint32_t *P2, const size_t &size, Geodesic &geodesic)
+void disc_mating(uint32_t *P1,  uint32_t *P2, const size_t &size, const Healpix_Map <int> &map)
 {
+	std::vector <int> disc;
+	int disc_size;
+	double rad=atan(2*sqrt(15.0/size) );
         for (size_t x=0; x<size; ++x)
         {
-                P1[x]=gedesic.get(x);
-                P2[x]=gedesic.get(x);
+		map.query_disc( map.pix2ang(x), rad, disc);
+		disc_size=disc.size();
+		std::cerr << disc_size << std::endl;
+                P1[x]=map[disc[rand() % disc_size]];
+                P2[x]=map[disc[rand() % disc_size]];
         }
 }
-
 
 void print_head(std::ostream &out, const int &length)
 {
@@ -537,9 +522,13 @@ make (individual *descendents[],
 	*descendents=new individual[generation_size*simulation_length];
 
 	uint32_t *P1=new uint32_t[generation_size], *P2= new uint32_t[generation_size];
-	double *M;
+	
 
-	M=new double[generation_size*generation_size/2];
+	arr <int> data(12);
+	if (type=='g') make_map_data(data, generation_size);	
+	Healpix_Map <int> map(data, RING);
+
+	//map();
 
 	for (size_t y=0; y<simulation_length; ++y)
 	{		
@@ -554,9 +543,9 @@ make (individual *descendents[],
 			case 'i':
 				random_consang(P1, P2, generation_size);
 			break;
-//			case 'v':
-//				mating_vector(P1, P2, generation_size, M);
-//			break;
+			case 'g':
+				disc_mating(P1, P2, generation_size, map);
+			break;
 			default:
 				random_mating(P1, P2, generation_size);
 			break;			

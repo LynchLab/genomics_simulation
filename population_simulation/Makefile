@@ -8,11 +8,13 @@ DESTDIR=/usr/local/bin
 DOCPATH=\"$(shell pwd)/../../docs/man/\"
 WARNINGS=-Wall -Werror=return-type -Wno-write-strings
 VERSION=-D VERSION=\"0.0\"
-INCLUDE=-I ./ 
+INCLUDE=-I ./ -I ~/src/Healpix_3.31/src/cxx/basic_gcc/include/ 
 
-LDLIBS=
+LDLIBS=-lhealpix_cxx -lcxxsupport -lsharp -lc_utils -lfftpack -l cfitsio -L ~/src/Healpix_3.31/src/cxx/basic_gcc/lib/ -L ~/src/cfitsio/
+#a18@deskpro109996:~/src/genomics_simulation/population_simulation$ c++ temp.cc -lhealpix_cxx -lcxxsupport -lsharp -lc_utils -lfftpack -l cfitsio -I ./src/cxx/basic_gcc/include/ -L ./src/cxx/basic_gcc/lib/ -L ~/src/cfitsio/
 
-CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
+
+CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp -fexceptions
 
 #DEBUG=-g -D DEBUG
 
