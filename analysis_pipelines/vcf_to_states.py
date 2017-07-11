@@ -31,10 +31,10 @@ class vcf_file:
 			self.samples[self.N*4+N*4+rl]+=mask[rr]
 	def set_sample_size(self, N):
 		self.zero=[0]*4*N*2
-		self.samples=self.zero
+		self.samples=self.zero[:]
 		self.N=N
 	def clear(self):
-		self.samples=self.zero
+		self.samples=self.zero[:]
 
 
 def write_state(lines, vcf, N):
@@ -59,10 +59,13 @@ while (True):
 	for x in range(0, 32):
 		line=L[x].split('\t')
 		if N==0:
-			N=250#len(line)-9
+			N=len(line)-9
+			sys.stderr.write(str(N))
 			vcf.set_sample_size(N)
 		K[x]=[0]*N*2
 		for y in range(0, N):
 			K[x][y*2]=int(line[9+y].split(':')[0].split('/')[0]=='1')
 			K[x][y*2+1]=int(line[9+y].split(':')[0].split('/')[1]=='1')
+		#	K[x][y*2]=int(line[9+y].split(':')[0].split('|')[0]=='1')
+		#	K[x][y*2+1]=int(line[9+y].split(':')[0].split('|')[1]=='1')
 	write_state(K, vcf, N)

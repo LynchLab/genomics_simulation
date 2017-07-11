@@ -1,0 +1,68 @@
+## Given the components of MME, estimate variance components by REML in the average information framework.
+
+## Arguments
+## A: an additive relationship matrix
+## y: a vector of response
+## X: a incidence matrix for fixed effects
+## Z: a incidence matrix for random effects
+## initE: initial value for the residual variance
+## initU: initial value for the additive genetic variance
+## disp: a logical value. If true, display estimates of variance components at each iteration.
+
+## Note 
+
+## Literature 1: Tsuruta, S. 2006. Estimation of Variance Components in Animal Breeding. The University of Georgia.
+## Literature 2: Mrode, R.A. 2005. Linear Models for the Prediction of Animal Breeding Values. CAB International, Oxon, UK.
+
+## Author: Gota Morota <morota at wisc dot edu>
+## Create: 7-Apr-2010
+## Last-Modified: 8-Apr-2010
+## License: GPLv3 or later
+
+`aiReml` <-
+function(A, y, X, Z, initE, initU, disp){
+
+	N <- length(y)
+	Ze <- diag(N)
+	Var <- c(initU, initE)
+	AI <- matrix(0, ncol=2, nrow=2)
+	s <- matrix(0, ncol=1, nrow=2)
+	diff1 <- 10
+	diff2 <- 10
+
+	i <- 0
+	while (diff1 > 10e-7 & diff2 > 10e-7 ){
+	
+		i <- i + 1
+	
+		G <- A*Var[1]
+		R <- Ze%*%t(Ze)*Var[2]
+		V <- Z%*%G%*%t(Z) + R
+		Vinv <- solve(V)
+		P <- Vinv - Vinv%*%X%*%solve(t(X)%*%Vinv%*%X)%*%t(X)%*%Vinv
+
+		AI[1,1] <- sum(diag((t(y)%*%P%*%Z%*%t(Z)%*%P%*%Z%*%t(Z)%*%P%*%y )))
+		AI[1,2] <-  sum(diag((t(y)%*%P%*%Z%*%t(Z)%*%P%*%Ze%*%t(Ze)%*%P%*%y ))) 
+		AI[2,1] <- AI[1,2]
+		AI[2,2] <- sum(diag((t(y)%*%P%*%Ze%*%t(Ze)%*%P%*%Ze%*%t(Ze)%*%P%*%y ))) 	
+		s[1,1] <- sum(diag((P%*%Z%*%t(Z) ))) - (t(y)%*%P%*%Z%*%t(Z)%*%P%*%y )
+		s[2,1] <- sum(diag((P%*%Ze%*%t(Ze) ))) - (t(y)%*%P%*%Ze%*%t(Ze)%*%P%*%y )
+	 
+		newVar <- Var - solve(AI)%*%s
+		diff1 <- abs(Var[1] - newVar[1])
+		diff2 <- abs(Var[2] - newVar[2])
+		Var <- newVar
+		if (disp == TRUE){
+			cat('\n')
+			cat("iteration ", i, '\n')
+			cat("sig2U", Var[1], '\n')		
+			cat("sig2E", Var[2], '\n')
+		}
+	
+	}
+	
+	cat('\n')
+	return(list( "sigma2U"=Var[1], "sigma2E"=Var[2]   ))
+
+}
+

@@ -1,0 +1,2 @@
+sed "s/^[ \t]*//" -i ../analysis_files/plink.ld 
+sed "s/ \+/ /g" -i ../analysis_files/plink.ld

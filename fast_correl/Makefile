@@ -9,7 +9,7 @@ WARNINGS=-Wall -Werror=return-type -Wno-write-strings
 VERSION=-D VERSION=\"0.0\"
 INCLUDE=-I ./ 
 
-LDLIBS=
+LDLIBS=-lgsl -lblas
 
 CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
 
@@ -18,7 +18,7 @@ CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLU
 #CXXFLAGS=$(VERSION) $(STD) $(DEBUG) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
 
 OBJDIR=obj
-TARGET1=./fastc
+TARGET=call_relatedness
 
 ifeq ($(HAVE_MAN), yes)
 	CXXFLAGS += -D USE_MAN -D PATH=$(DOCPATH)
@@ -33,7 +33,7 @@ SUBDIR=
 
 #>! TODO ORGANIZE THESE!
 
-MAIN=fastc.o
+MAIN=call_relatedness.o
 
 #These all depend on interface.h
 #Depend on db_api

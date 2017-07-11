@@ -1,5 +1,6 @@
 import sys
 import numpy
+import mappy
 
 def samples_to_string(samples):
 	string=[]
@@ -21,6 +22,8 @@ class pop_file:
 		self.d[ind]+=d[gen]
 		self.i[ind]+=i[gen]
 		self.g[ind]+=z[gen]
+	def set_env(self,var, N):
+		self.e=numpy.random.normal(0,var, N)
 	def set_sample_size(self, N):
 		self.N=N
 		self.a=[0]*N
@@ -86,15 +89,23 @@ def read_state(field, vcf, N):
 			iota[1]=-d*(q-p)**2 * c2 + dibd
 			iota[2]=-2*q*d*(q-p) * c2 + dibd
 			vcf.set_sample(alpha, delta, iota, g, x, genotype[x] )
-N=int(sys.argv[1])
-name=int(sys.argv[2])
-SIZE=int(sys.argv[3])
-LOCI=int(sys.argv[4])
-inb=open(sys.argv[5])
-d=float(sys.argv[6])
+
+namefile=mappy.open(sys.argv[1])
+name=mappy.read(namefile).split('\t')[1:]
+
+N=len(name)
+SIZE=int(sys.argv[2])
+LOCI=int(sys.argv[3])
+inb=open(sys.argv[4])
+d=float(sys.argv[5])
+e=float(sys.argv[6])
+
 F=[]
-for line in inb:
-	F.append(float(line) )
+#for line in inb:
+#	F.append(float(line) )
+for x in range (0. N):
+	F.append(0)
+
 loci=sorted(map(int, numpy.random.uniform(0,SIZE, LOCI)))
 field=[0]*N*2
 pop=pop_file()
@@ -120,7 +131,10 @@ a_hat=float(sum(pop.a))/float(N)
 g_hat=float(sum(pop.g))/float(N)
 d_hat=float(sum(pop.d))/float(N)
 i_hat=float(sum(pop.i))/float(N)
+var=numpy.var(pop.g)*e
+pop.set_env(var, N)
 e_hat=float(sum(pop.e))/float(N)
+
 z_hat=0#a_hat+d_hat+e_hat+i_hat
 for x in range(0, N):
-	print '\t'.join(map(str, [x+name, x+name, pop.a[x]+pop.d[x]+pop.e[x]+pop.i[x]-z_hat, pop.a[x], pop.d[x], pop.i[x], pop.e[x]-e_hat, pop.g[x]-g_hat, F[x]]))
+	print '\t'.join(map(str, [name[x], name[x], pop.a[x]+pop.d[x]+pop.e[x]+pop.i[x]-z_hat, pop.a[x], pop.d[x], pop.i[x], pop.e[x]-e_hat, pop.g[x]-g_hat, F[x]]))

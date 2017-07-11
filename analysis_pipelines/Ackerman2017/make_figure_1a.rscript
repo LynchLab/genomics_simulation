@@ -1,0 +1,92 @@
+
+
+#read files
+true<-read.csv("../analysis_files/true_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
+mapgd<-read.csv("../analysis_files/mapgd_calls-trim.csv", sep="\t", fill=TRUE, na.strings="NaN")
+#mapgd_newton<-read.csv("../analysis_files/mapgd_calls_newton-trim.csv", sep="\t", fill=TRUE, na.strings="NaN")
+bcf<-read.csv("../analysis_files/bcf_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
+gatk<-read.csv("../analysis_files/gatk_frequencies.csv", sep=" ", fill=TRUE, na.strings="NaN")
+angsd<-read.csv("../analysis_files/angsd_frequencies.csv", sep="\t", fill=TRUE, na.strings="NaN")
+
+source("figures.conf")
+
+pdf("../figures/figure_1a.pdf")
+par(mar=MAR2, family=FONT, font.lab=2)
+
+names(true)[names(true)=="VR_FREQ"] <- "TRUE_FREQ"
+names(true)[names(true)=="F_STAT"] <- "TRUE_FSTAT"
+names(mapgd)[names(mapgd)=="VR_FREQ"] <- "MAPGD_FREQ"
+names(mapgd)[names(mapgd)=="F_STAT"] <- "MAPGD_FSTAT"
+names(mapgd)[names(mapgd)=="POLY_LR"] <- "MAPGD_Q"
+names(bcf)[names(bcf)=="VR_FREQ"] <- "BCF_FREQ"
+names(bcf)[names(bcf)=="QUAL"] <- "BCF_Q"
+names(gatk)[names(gatk)=="VR_FREQ"] <- "GATK_FREQ"
+names(gatk)[names(gatk)=="QUAL"] <- "GATK_Q"
+names(angsd)[names(angsd)=="Freq"] <- "ANGSD_FREQ"
+names(angsd)[names(angsd)=="Position"] <- "POS"
+
+#names(mapgd_newton)[names(mapgd_newton)=="VR_FREQ"] <- "MAPGDN_FREQ"
+#names(mapgd_newton)[names(mapgd_newton)=="F_STAT"] <- "MAPGDN_FSTAT"
+#names(mapgd_newton)[names(mapgd_newton)=="POLY_LR"] <- "MAPGDN_Q"
+
+m<-merge(true, mapgd, by="POS",all.x=TRUE, all.y=TRUE)
+m<-merge(m, bcf, by="POS",all.x=TRUE, all.y=TRUE)
+m<-merge(m, gatk, by="POS",all.x=TRUE, all.y=TRUE)
+m<-merge(m, angsd, by="POS",all.x=TRUE, all.y=TRUE)
+
+#m<-merge(m, mapgd_newton, by="POS",all.x=TRUE, all.y=TRUE)
+
+k<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0), Z=c(0), A=c(0), B=c(0), D=c(0), E=c(0), F=c(0), G=c(0) )
+colnames(k)<-c("true", "bcf_bias", "bcf_rmse", "mapgd_bias", "mapgd_rmse", "gatk_bias", "gatk_rmse", "angsd_bias", "angsd_rmse")
+
+w<-0.005
+
+m$TRUE_FREQ[is.na(m$TRUE_FREQ)] <- 0
+m[1:2,]
+
+for (f in unique (sort(m$TRUE_FREQ)) )
+{
+	if ( (f>0) & (f<1) )
+	{
+		k=rbind(k, c(f, mean(m$BCF_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$BCF_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ), 
+				mean(m$MAPGD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$MAPGD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ), 
+				mean(m$GATK_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$GATK_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ), 
+				mean(m$ANGSD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$ANGSD_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ),
+				mean(m$MAPGDN_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE), sqrt(var(m$MAPGDN_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)]-m$TRUE_FREQ[m$TRUE_FREQ>=(f-w) & m$TRUE_FREQ<=(f+w)], na.rm=TRUE) ) ) )
+	}
+}
+
+
+k<-k[-1, ]
+
+plot(k$true, k$mapgd_bias, ylim=c(-0.12, 0.12), lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab="Sample frequency", ylab="Bias", type='l', col=rgb(0.8,0.8,0.8,0.0) )
+
+abline(h=0, col=rgb(0,0,0,1), lwd=LINESIZE )
+
+legend(0.05, 0.12, c("mapgd", "bcftools", "gatk", "angsd"), cex=LABSIZE, col = c("RED", "BLUE", "GREEN", "CYAN"), pch = c(20, 20, 20) )
+
+k$mapgd_rmse[is.na(k$mapgd_rmse)] <- 0
+k$gatk_rmse[is.na(k$gatk_rmse)] <- 0
+k$bcf_rmse[is.na(k$bcf_rmse)] <- 0
+k$angsd_rmse[is.na(k$angsd_rmse)] <- 0
+
+polygon(c(k$true, rev(k$true) ), c(k$bcf_bias-k$bcf_rmse, rev(k$bcf_bias+k$bcf_rmse) ), border = "black", col =rgb(0,0,1,0.5), lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$gatk_bias-k$gatk_rmse, rev(k$gatk_bias+k$gatk_rmse) ), border = "black", col =rgb(0,1,0,0.5) , lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$angsd_bias-k$angsd_rmse, rev(k$angsd_bias+k$angsd_rmse) ), border = "black", col =rgb(0,1,1,0.5) , lty = par("lty") )
+
+polygon(c(k$true, rev(k$true) ), c(k$bcf_bias-k$bcf_rmse, rev(k$bcf_bias+k$bcf_rmse) ), lwd=LINESIZE, border = rgb(0,0,0.5,1), col=rgb(0,0,1,0.0), lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$gatk_bias-k$gatk_rmse, rev(k$gatk_bias+k$gatk_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0,1), col =rgb(0,1,0,0.0) , lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$angsd_bias-k$angsd_rmse, rev(k$angsd_bias+k$angsd_rmse) ), lwd=LINESIZE, border = rgb(0,0.5,0.5, 1), col =rgb(0,1,1,0.0) , lty = par("lty") )
+
+polygon(c(k$true, rev(k$true) ), c(k$mapgd_bias-k$mapgd_rmse, rev(k$mapgd_bias+k$mapgd_rmse) ), border = "black", col =rgb(1,0,0,0.5) , lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$mapgd_bias-k$mapgd_rmse, rev(k$mapgd_bias+k$mapgd_rmse) ), lwd=LINESIZE, border =rgb(0.5, 0,0, 1), col =rgb(1,0,0,0.0) , lty = par("lty") )
+
+points(k$true, k$mapgd_bias, type='l', col=rgb(1,0,0,1),  lwd=LINESIZE)
+points(k$true, k$gatk_bias, type='l', col=rgb(0,1,0,1), lwd=LINESIZE)
+points(k$true, k$bcf_bias, type='l', col=rgb(0,0,1,1), lwd=LINESIZE)
+points(k$true, k$angsd_bias, type='l', col=rgb(0,1,1,1), lwd=LINESIZE )
+
+abline(h=0, col=rgb(0,0,0,1) )
+
+dev.off()
+

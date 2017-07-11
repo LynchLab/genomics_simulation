@@ -8,8 +8,9 @@
 #include <omp.h>
 #include <healpix_map.h>
 #include <iomanip>
+//#include "interface.h"
 
-#define REC
+//#define REC
 #define MUT
 
 #define LOCI	32
@@ -174,7 +175,9 @@ void disc_mating(uint32_t *P1,  uint32_t *P2, const size_t &size, const Healpix_
 {
 	std::vector <int> disc;
 	int disc_size;
-	double rad=atan(2*sqrt(15.0/size) );
+	//	A five hundred mile dispersal disc
+	//double rad=0.050478006;
+	double rad=atan(2*sqrt(8.0/size) );
         for (size_t x=0; x<size; ++x)
         {
 		map.query_disc( map.pix2ang(x), rad, disc);
@@ -198,6 +201,18 @@ void print_names(int N, int t, std::ostream &out)
 	out << "../analysis_files/mpileup.txt.gz";
 	for (size_t x=0; x<N; ++x){
 		out << '\t' << t*N+x;
+	}
+	out << "\n@END_TABLE\n";
+}
+
+void print_cord(int N, int t, const Healpix_Map <int> &map, std::ostream &out)
+{
+	
+	out << "@NAME:TRAITS	VERSION:TYPED	FORMAT:TEXT\n";
+	out << "@SAMPLE_NAME	TRAIT1	TRAIT2\n";
+	for (size_t x=0; x<N; ++x){
+		pointing p=map.pix2ang(x);
+		out << t*N+x << '\t' <<  p.theta << '\t' << p.phi << std::endl;
 	}
 	out << "\n@END_TABLE\n";
 }
@@ -556,6 +571,14 @@ make (individual *descendents[],
 			(*descendents)[y*generation_size+x].P2=P2[x];
 		}
 	}
+
+	
+	std::fstream map_file;
+
+        map_file.open ("trait-file.txt", std::fstream::out);
+        print_cord(generation_size, simulation_length, map, map_file);
+        map_file.close();
+
 	delete P1;
 	delete P2;
 }
@@ -878,7 +901,6 @@ main(int argc, char *argv[] )
 
 	// [0]->N [1]->N ](t) **t,2,N
 #ifdef REC
-	std::cerr << r << std::endl;
 	std::uniform_int_distribution<int> r32(0,31);
 	std::uniform_int_distribution<int> r10(0,20);
 	Gcounter gcounter(mt, r);
@@ -890,6 +912,7 @@ main(int argc, char *argv[] )
 		Rstate[y][1]=new uint32_t[N];
 	}
 #endif
+	
 
 #ifdef MUT
 #ifndef REC
@@ -967,9 +990,9 @@ main(int argc, char *argv[] )
 //	print_results3(std::cout, k, N, Results);
 
 	std::fstream pedigree;
-//	pedigree.open ("pedigree.txt", std::fstream::out);
-//	print_ped(&descendents, N, t, pedigree);
-//	pedigree.close();
+	pedigree.open ("pedigree.txt", std::fstream::out);
+	print_ped(&descendents, N, t, pedigree);
+	pedigree.close();
 
 	pedigree.open ("name-file.txt", std::fstream::out);
 	print_names(N, t, pedigree);

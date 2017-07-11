@@ -1,10 +1,14 @@
-v<-read.csv("freq", sep=" ")
+v<-read.csv("../analysis_files/true_frequencies.csv", sep=" ")
 
 source("figures.conf")
 
 pdf("../figures/figure_freq.pdf")
 par(mar=MAR2, family=FONT, font.lab=2)
 
-hist(v$VR_FREQ*400, 400,  cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab="N derived allele", main="Allele frequency spectrum")
+N<-(216+50) #length(unique(v$VR_FREQ))
+
+v$VR_FREQ[v$VR_FREQ == 0] <- NA
+
+hist(v$VR_FREQ, N, cex.lab = LABSIZE, cex.axis = AXISSIZE, xlab="N derived allele", main="Allele frequency spectrum")
 
 dev.off()

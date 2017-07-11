@@ -1,4 +1,12 @@
 import argparse
+import os
+import csv, sqlite3
+
+con = sqlite3.connect("poly.db")
+cur = con.cursor()
+
+#type, pos, A, B, BOOL 
+cur.execute("CREATE TABLE snps (sample INTEGER, var VARCHAR(40) );") # use your column names here
 
 parser = argparse.ArgumentParser(description='make a mutation file.')
 parser.add_argument('-N', metavar='--number', type=int, default=0,
@@ -16,26 +24,27 @@ N=args.N
 
 states=[]
 
-File_array_0=[]
-File_array_1=[]
-
-for n in range (0, N):
-	N_str='%03d' % n
-	#print N_str
-	File_array_0.append(open("seq_"+N_str+".0.poly", "w") )
-	File_array_1.append(open("seq_"+N_str+".1.poly", "w") )
+os.system("echo \" PRAGMA synchronous=OFF;\" | sqlite3 poly.db")
 
 for line in state_file:
-#	states.append( line.strip('\n').split('\t')[1:]  ) 
 	states.append( line[1:]  ) 
-
+X=0
+inserts=[]
 for line in mutat_file:
 	state=states.pop(0)
-	#print "*", state
+	line=line.strip('\n')
+	if X==1000:
+		cur.executemany("INSERT INTO snps VALUES (?, ?);", inserts )
+		con.commit()
+		inserts=[]
+		X=0
 	for n in range (0, N):
-		#print "HI!", n, N
-#		print "*", state[n*4], state[n*4]=='1', state[n*4+2], state[n*4+2]=='1'
 		if state[n*4]=='1':
-			File_array_0[n].write(line)
+			inserts.append([n*2+0, line])
 		if state[n*4+2]=='1':
-			File_array_1[n].write(line)
+			inserts.append([n*2+1, line])
+	X=X+1
+cur.executemany("INSERT INTO snps VALUES (?, ?);", inserts )
+con.commit()
+cur.execute("CREATE INDEX all_snps ON snps (sample, var);") # use your column names here
+con.close()

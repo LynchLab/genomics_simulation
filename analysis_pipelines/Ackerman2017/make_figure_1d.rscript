@@ -1,0 +1,46 @@
+true<-read.csv("../analysis_files/true_ld.csv", sep=" ", fill=TRUE, na.strings="NaN")
+mapgd<-read.csv("../analysis_files/mapgd_linkage-trim.csv", sep="\t", fill=TRUE, na.strings="NaN")
+plink<-read.csv("../analysis_files/plink.ld", sep=" ", fill=TRUE, na.strings="NaN")
+
+source("figures.conf")
+
+pdf("../figures/figure_1d.pdf")
+
+names(true)[names(true)=="RSQ"] <- "TRUE_RSQ"
+names(mapgd)[names(mapgd)=="BEST_R2"] <- "MAPGD_RSQ"
+names(mapgd)[names(mapgd)=="POS_X"] <- "POS1"
+names(mapgd)[names(mapgd)=="POS_Y"] <- "POS2"
+names(plink)[names(plink)=="R2"] <- "PLINK_RSQ"
+names(plink)[names(plink)=="BP_A"] <- "POS1"
+names(plink)[names(plink)=="BP_B"] <- "POS2"
+
+m<-merge(true, mapgd, by=c("POS1", "POS2"), all.x=TRUE)
+m<-merge(m, plink, by=c("POS1", "POS2"), all.x=TRUE)
+
+k<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0), Z=c(0) )
+colnames(k)<-c("true", "mapgd_bias", "mapgd_rmse", "plink_bias", "plink_rmse")
+
+w<-0.05
+rs<-c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+
+m<-m[,c("POS1","POS2", "TRUE_RSQ", "MAPGD_RSQ", "PLINK_RSQ") ]
+m<- na.omit(m)
+
+for (r in unique (sort(rs)) )
+{
+	if ( (r>0) & (r<1) )
+	{
+		k=rbind(k, c(r, mean(m$MAPGD_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)]-m$TRUE_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)], na.rm=TRUE), sqrt(var(m$MAPGD_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)]-m$TRUE_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)], na.rm=TRUE) ), 
+		mean(m$PLINK_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)]-m$TRUE_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)], na.rm=TRUE), sqrt(var(m$PLINK_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)]-m$TRUE_RSQ[m$TRUE_RSQ>=(r-w) & m$TRUE_RSQ<=(r+w)], na.rm=TRUE) ) ) ) 
+	}
+}
+
+plot(k$true, k$mapgd_bias, ylim=c(-0.3, 0.3), xlab=expression(r^2), ylab="Bias", type='l', col=rgb(1,0,0,1) )
+points(k$true, k$plink_bias, col=rgb(0,0,1,1), type='l' )
+
+polygon(c(k$true, rev(k$true) ), c(k$mapgd_bias-k$mapgd_rmse, rev(k$mapgd_bias+k$mapgd_rmse) ), border = "black", col =rgb(1,0,0,0.5), lty = par("lty") )
+polygon(c(k$true, rev(k$true) ), c(k$plink_bias-k$plink_rmse, rev(k$plink_bias+k$plink_rmse) ), border = "black", col =rgb(0,0,1,0.5), lty = par("lty") )
+
+abline(h = 0)
+
+dev.off()

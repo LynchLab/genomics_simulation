@@ -36,7 +36,7 @@ SUBDIR=
 
 #>! TODO ORGANIZE THESE!
 
-MAIN=pedigree_sim.o
+MAIN=pedigree_sim_w_fitness.o
 
 #These all depend on interface.h
 #Depend on db_api

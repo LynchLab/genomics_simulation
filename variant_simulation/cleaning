@@ -1,0 +1,14 @@
+def denovo (string, start, stop, *arg):
+
+def copy (string, src_start, src_stop, dst_start, forward, *arg):
+
+def tdcopy (string, src_start, src_stop, dst_start, forward, n):
+
+def trans (string, src_start, src_stop, dst_start, forward, *arg):
+
+def invert (string, start, stop, *arg):
+
+def delete (string, start, stop, *arg):
+        return string[:start]+string[stop:]
+
+def SNP(string, locus, newbase, *arg):

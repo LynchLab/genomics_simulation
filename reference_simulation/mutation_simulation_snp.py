@@ -23,7 +23,11 @@ File=open(seq)
 in_seq=''.join(File.read().split('\n')[1:])
 File.close()
 
-File=open(mut)
+if mut=='-':
+	File=sys.stdin	
+else:
+	File=open(mut)
+
 last=-1
 out=[]
 for line in File:

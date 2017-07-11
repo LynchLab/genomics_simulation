@@ -1,26 +1,18 @@
 #!/bin/bash
 
-POPULATION=432
-POP2=$((POPULATION/2))
-SAMPLE=$POPULATION
-TIME=$((1*POPULATION))
-TIMEX=$((9*PULATION+POPULATION/2))
-REF="reference.fa"
-COV=3
-K=100
-SIZE=$(($K*640)) 	#make sure to use bwa mem!!
-SNPS=$(($K*10))  
-REFTYPE='Y'
+source settings.sh
 
 echo "simulating population"
 cd sequences
 #../population_simulation/non_pedigree_sim $POPULATION $SNPS t 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
 #../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.002 0.002 s b 1 0.5 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
-../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 50 0.01 g t 2> var > states.txt
-cat name-file.txt | cut -d '	' -f 1-$((SAMPLE+2)) > name-file2.txt
-mv name-file2.txt name-file.txt
+../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 50 0.01 g t 2> var | cut -d '	' -f 1$SAMPLE_CHRM > states.txt
+head -2 name-file.txt > temp-file.txt
+head -3 name-file.txt | tail -n 1 | cut -d '	' -f 1$SAMPLE_NAME >> temp-file.txt
+tail -n 1 name-file.txt >> temp-file.txt
+mv temp-file.txt name-file.txt
 rm -rf pedigree.txt.gz
-#gzip pedigree.txt
+	gzip pedigree.txt
 cd ..
 
 case $REFTYPE in
@@ -30,11 +22,14 @@ case $REFTYPE in
 		python reference_simulation/mutation_simulation.py -m ./sequences/reference_mutations.txt -s ./reference_simulation/seed.fa > ./sequences/$REF
 		;;
   [Y]   )
-		echo "using yeast chromosome I"
-		cp ./real_genomes/S288C_Chromosome\ I.fsa ./sequences/$REF
+		echo "using yeast chromosome IV"
+		cp ./real_genomes/S288C_Chromosome\ IV.fsa ./sequences/$REF
 		;;
+  [D]   )
+                echo "using dmel3R "
+                cp ./real_genomes/dmel-3R.fa ./sequences/$REF
+                ;;
 esac
-
 
 echo "making individual genomes"
 cd variant_simulation
@@ -51,11 +46,17 @@ do
 
 	echo $NAME
 
+	gunzip ./sequences/$NAME.0.fa.gz
+	gunzip ./sequences/$NAME.1.fa.gz
+
 	./sequencing_simulation/art_illumina -qs -15 -qs2 -15 -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
 	./sequencing_simulation/art_illumina -qs -15 -qs2 -15 -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
 
 #	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.0.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.0 > /dev/null
 #	./sequencing_simulation/art_illumina -ss HS25 -sam -i ./sequences/$NAME.1.fa -p -l 150 -f $COV -m 200 -s 10 -o temp.1 > /dev/null
+
+	rm ./sequences/$NAME.0.fa
+	rm ./sequences/$NAME.1.fa
 
 	cat temp.01.fq > ./sequences/temp.1.fq
 	cat temp.11.fq >> ./sequences/temp.1.fq
@@ -66,8 +67,8 @@ do
 #	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($SAMPLE*$TIME+10#$x)) > /dev/null 2> /dev/null
 #	bash ./alignment/run_alignment.sh sequences/$REF ./sequences/temp ./sequences/$NAME $(($SAMPLE*$TIME+10#$x)) 
 
-	mv ./sequences/temp.1.fq ./sequences/$NAME.0.fq
-	mv ./sequences/temp.2.fq ./sequences/$NAME.1.fq
+#	mv ./sequences/temp.1.fq ./sequences/$NAME.0.fq
+#	mv ./sequences/temp.2.fq ./sequences/$NAME.1.fq
 
 	rm temp.01.fq
 	rm temp.11.fq
@@ -95,19 +96,16 @@ rm seqeuences/temp.2.fq
 cd analysis_pipelines
 
 #./mapgd_analysis_newton.sh $REF
-./mapgd_analysis.sh $REF
+./mapgd_analysis.sh $REF $LD_DIST
 ./bcftools_analysis.sh $REF
 ./angsd_analysis.sh $REF
 ./gatk_analysis.sh $REF
 ./plink_analysis.sh $REF
-
 ./gcta_analysis.sh 
-./gatk_analysis.sh $REF
-#./gcta_analysis.sh $REF
 
 gunzip ../sequences/states.txt
 python get_frequencies.py ../sequences/states.txt ../sequences/polymorphisms.map > ../analysis_files/true_frequencies.csv
-python get_ld.py ../sequences/states.txt ../sequences/polymorphisms.map 500 > ../analysis_files/true_ld.csv
+python get_ld.py ../sequences/states.txt ../sequences/polymorphisms.map $LD_DIST > ../analysis_files/true_ld.csv
 gzip ../sequences/states.txt
 
 Rscript Ackerman2017/make_figure_1a.rscript	#Bias RMSE of allele frequenceis

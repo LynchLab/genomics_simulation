@@ -4,20 +4,20 @@ SIZE="`head -1 $states | grep '	' -o | wc -l`"
 POLY=../sequences/polymorphisms.map
 REFSIZE=$((`tail -n +2 $1 | wc -c`-`tail -n +2 $1 | wc -l`))
 
-
 python mutation_simulation2.py -n "`wc -l $states | cut -d ' ' -f 1`" -l $REFSIZE -o True > temp
 python mutation_sort.py temp > $POLY
 
 rm temp
-
-python state_to_fasta.py -N $((SIZE/2)) -s $states -m $POLY
+rm -f poly.db
+python state_to_fasta.py -N $((SIZE/2)) -s $states -m $POLY 
 
 for N in `seq 0 2 $((SIZE-2))` 
 do
 	name=`printf %03d $((N/2))`
 	echo $name
-	python mutation_simulation_snp.py -m seq_$name.0.poly -s $ref -N seq_$name > ../sequences/seq_$name.0.fa
-	python mutation_simulation_snp.py -m seq_$name.1.poly -s $ref -N seq_$name > ../sequences/seq_$name.1.fa
+
+	echo "SELECT var FROM snps WHERE sample=$N;" | sqlite3 poly.db  | ./mutate -r $ref -n seq_$name  | gzip - > ../sequences/seq_$name.0.fa.gz
+	echo "SELECT var FROM snps WHERE sample=$((N+1));" | sqlite3 poly.db  | ./mutate -r $ref -n seq_$name | gzip - > ../sequences/seq_$name.1.fa.gz
 done
 
-rm *.poly
+rm -f poly.db

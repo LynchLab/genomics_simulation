@@ -1,0 +1,12 @@
+This is turning into a serious simulation.
+
+__ Standardized state file
+	Header: char width (uint_8t), states per char (uint_8t), char per line (uint_16t)
+	Followed by states
+	Implement in mapgd, python
+__ Standardized poly file (Move into a mapgd format?)
+	
+	Implement in mapgd, python
+__ Standardized pedigree file 
+
+__ 
