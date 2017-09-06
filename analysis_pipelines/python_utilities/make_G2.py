@@ -33,10 +33,6 @@ for line in sys.stdin:
 	A[x,x] += 0
 	A[y,y] += 0
 
-for x in range(0, N):
-	A[x,x]=A[x,x]/N
-#	f[x]=A[x,x]
-
 #f_bar=numpy.mean(f)
 
 for x in range (0, N):

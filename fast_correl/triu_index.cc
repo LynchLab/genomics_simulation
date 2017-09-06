@@ -3,19 +3,22 @@
 Triangular_index::Triangular_index(size_t size)
 {
 	n_=size;
-	size_= (n_*(n_-1)/2);
+	size_= (n_*(n_+1)/2);
 	k_=0;
 	x_=0;
-	y_=1;
+	y_=0;
 	dirty_=false;
 }
+
 
 void 
 Triangular_index::clean_(void)
 {
 	if (k_<=size_){
-		x_ = n_ - 2 - floor(sqrt(-8*k_ + 4*n_*(n_-1)-7)/2.0 - 0.5);
-		y_ = k_ + x_ + 1 - n_*(n_-1)/2 + (n_-x_)*((n_-x_)-1)/2;
+		int k =n_*(n_+1)/2-1-k_;
+  		int K = floor( (sqrt(8*k+1)-1)/2);
+		x_ = n_-1-K;
+		y_ = k_ -n_*(n_+1)/2 + (K+1)*(K+2)/2+n_-1-K;
 	} else {
 		fprintf(stderr, gettext("mapgd:%s:%d: Array index out of bounds.\n"), __FILE__, __LINE__);
 	}
@@ -48,7 +51,7 @@ Triangular_index::set(const size_t &x, const size_t &y)
 {
 	x_=x;
 	y_=y;
-	k_ = (n_*(n_-1)/2) - (n_-x)*((n_-x)-1)/2 + y - x - 1;
+	k_ = (n_*(n_+1)/2) - (n_-x)*((n_-x)+1)/2 + y - x;
 	dirty_=false;
 }
 
@@ -57,7 +60,7 @@ Triangular_index& Triangular_index::operator++()
 	k_++;
 	if (++y_ >= n_)
 	{
-		y_=(++x_)+1;
+		y_=(++x_);
 	}
 	return *this;
 }

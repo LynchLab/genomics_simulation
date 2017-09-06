@@ -387,10 +387,10 @@ int main (int argc, char **argv){
 				double OX=((Mmmm+MmMm+MmMM)/2.+MMmm+MMMm+MMMM+1)/Den;
 				double OY=((mmMm+MmMm+MMMm)/2.+mmMM+MmMM+MMMM+1)/Den;
 
-				OX=d2;
-				OY=d2;
+				//OX=d2;
+				//OY=d2;
 
-				double M=(OX+OY)/2.;
+				double M=d2;
 
 
 				//std::cerr << d2 << ", " << F[hash_F(T, T_MIN, c2)]/double(Den*N) << ", " << f << std::endl;
