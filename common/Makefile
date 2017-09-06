@@ -3,11 +3,13 @@
 #Right now I need c++11 to support constructor delegation, which I like a lot.
 
 MODE=-O3
+DEBUG=-g -D DEBUG
 STD=-std=c++11
 WARNINGS=-Wall -Werror=return-type -Wno-write-strings
 VERSION=-D VERSION=\"0.0\"
-
-CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp -fexceptions
+CXX=g++
+INCLUDE=-I ./include -I ~/src/lz4/lib -L ~/src/lz4/lib
+CXXFLAGS=$(VERSION) $(MODE) $(STD) $(WARNINGS)  -pedantic $(INCLUDE) -fopenmp -fpic -llz4
 
 OBJDIR=obj
 
@@ -16,6 +18,8 @@ ifeq ($(HAVE_MAN), yes)
 endif
 
 SUBDIR=
+
+VPATH = ./src
 #>! Just a list of flags to try at some later date.
 # -oFast -ffloat-store -fexcess-precision=style -ffast-math -fno-rounding-math -fno-signaling-nans
 # -fcx-limited-range -fno-math-errno -funsafe-math-optimizations -fassociative-math -freciprocal-math
@@ -28,11 +32,18 @@ MAIN=mutate.o
 
 #These all depend on interface.h
 #Depend on db_api
+TARGET=libmapgd.so
 
-OBJ=interface.o  stream-tools.o fasta.o
+OBJ=obj/interface.o obj/stream_tools.o obj/fasta.o obj/sample_name.o obj/map_file.o obj/data.o obj/tmp_buffer.o obj/file_index.o obj/relatedness_data.o obj/state.o obj/correl_data.o
+
+#all: $(OBJ)
+#	$(CXX) -c $(OBJ) $(CXXFLAGS) 
 
 all: $(OBJ)
-	$(CXX) -c $(OBJ) $(CXXFLAGS) 
+	$(CXX) -shared -o $(TARGET) $(OBJ) $(CXXFALGS) $(INCLUDE)
+
+obj/%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $< $(INCLUDE)
 
 clean:
 	rm -f *.o

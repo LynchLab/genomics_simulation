@@ -1,0 +1,103 @@
+library(expm)
+
+join <- function(matricies){
+	nmatrix<-length(matricies)
+	rnm<-sqrt(nmatrix)
+	msize<-nrow(matricies[[1]])
+	fsize<-rnm*msize
+	q<-msize*nmatrix
+	ret<-matrix( c(rep(0, q) ), ncol=fsize, nrow=fsize) 
+	col<-0
+	row<-0
+	for (X in 0:(rnm-1))
+	{
+		for (Y in 0:(rnm-1))
+		{
+			m<-matricies[[X*rnm+Y+1]]
+			for (x in 1:msize)
+			{
+				for (y in 1:msize)
+				{
+					ret[X*msize+x,Y*msize+y]<-m[x,y]
+				}
+			}
+		}
+	}
+	return(ret) 
+}
+
+N<-10
+Q<-2
+
+U<-matrix(nrow=N*2, ncol=Q)
+
+lnL <- function(n){
+	lnL<-0
+	for (x in n) {
+		lnL<-lnL+log(pnorm(x))
+	}
+	return(lnL)
+}
+
+decon<-function(p)
+{
+	tV<-R %*% join(list(p[1]*X, p[2]*t(XY), p[2]*XY, p[3]*Y)) %*% t(R)
+	N<-dim(z)[2]
+	P<-(z %*% t(z) )/N 
+	ret<-sum( (tV-P)^2 )
+#	u<-decon2(p)
+#	N<-length(u)
+#	ret<-sum( (sort(u)-qdist)^2)
+#	ret<- -(var(as.vector(u))-1)^2-mean(as.vector(u))^2
+#	ret<-shapiro.test(as.vector(u))$p
+	message(N, " (",  ret, ") ", p[1], " ", p[2], " ", p[3], " ")
+	return(ret)
+}
+
+decon2<-function(p)
+{
+	tV<-join(list(p[1]*X, p[2]*t(XY), p[2]*XY, p[3]*Y))
+	u<-solve( sqrtm( R %*% tV %*% t(R) ) ) %*% z
+	return(u)
+}
+
+for (i in 1:Q)
+{
+	U[,i]<-rnorm(N*2)
+}
+
+R<<-matrix( c(rep(diag(N), 2) ), ncol=2*N, nrow=N)
+Rx<-matrix( c(diag(N), rep(0, N*N) ) , ncol=2*N, nrow=N)
+Ry<-matrix( c(rep(0, N*N), diag(N) ), ncol=2*N, nrow=N)
+
+A <- matrix(rnorm(N^2, 0.4, 1), ncol=N, nrow=N) 
+X<<- (t(A) %*% A)/mean(diag((t(A) %*% A) ) )
+A <- matrix(rnorm(N^2, 0.4, 1), ncol=N, nrow=N) 
+Y<<- (t(A) %*% A)/mean(diag(t(A) %*% A ) )
+A <- matrix(rnorm(N^2, 0, 0.02), ncol=N, nrow=N) 
+XY<<- (t(A) %*% A)/mean(diag(t(A) %*% A ) )
+
+sx<-4
+sxy<-0.01
+sy<-1
+
+V<-join(list(sx*X, sxy*t(XY), sxy*XY, sy*Y))
+Vr<-sqrtm(V)
+
+x<-Rx %*% Vr %*% U
+y<-Ry %*% Vr %*% U
+z<<-R %*% Vr %*% U
+
+qlen<-length(z)
+
+qdist_t<-rep(0, qlen)
+for (x in 1:qlen) {
+	qdist_t[x]<-qnorm(x/(qlen+1) )
+}
+qdist<<-qdist_t
+
+o<-optim(c(1,1,1), decon) 
+
+
+#A<-as.matrix( , ncol=N, nrow=N)
+#D<-as.matrix( , ncol=N, nrow=N)

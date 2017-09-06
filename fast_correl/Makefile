@@ -7,13 +7,12 @@ STD=-std=c++11
 DESTDIR=/usr/local/bin
 WARNINGS=-Wall -Werror=return-type -Wno-write-strings
 VERSION=-D VERSION=\"0.0\"
-INCLUDE=-I ./ 
+INCLUDE=-I ./ -I ../common/include/ -I ~/src/lz4/lib 
+LDLIBS=-lgsl -lblas -L ../common/ -lmapgd -L ~/src/lz4/lib -llz4
 
-LDLIBS=-lgsl -lblas
+DEBUG=-g -D DEBUG
 
-CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
-
-#DEBUG=-g -D DEBUG
+CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp #$(DEBUG)
 
 #CXXFLAGS=$(VERSION) $(STD) $(DEBUG) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
 
@@ -33,7 +32,10 @@ SUBDIR=
 
 #>! TODO ORGANIZE THESE!
 
-MAIN=call_relatedness.o
+MAIN=fast_correl_w_weights.o triu_index.o
+
+#MAIN=get_kappa_f.o
+#TARGET=get_kappa_f
 
 #These all depend on interface.h
 #Depend on db_api

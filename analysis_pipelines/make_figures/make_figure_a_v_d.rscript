@@ -1,0 +1,119 @@
+source("figures.conf")
+source("rangemean.rscript")
+LABSIZE=2
+
+graph<-function(x)
+{
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(t, pch=20, xlab="Number of loci", ylab=expression(h^2), log="x", ylim=c(x, 1.0),  lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE, col=rgb(0,0,0,0.2) )
+m<-rangemean(t$V2, log(t$V1), 100)
+m<-m[complete.cases(m), ]
+points(exp(m[,1]), m[,2], type='l', lty=2, col="red", lwd=5)
+
+abline(h=1.0, lty=2, lwd=2)
+abline(h=0.9, lty=2, lwd=2)
+abline(h=0.8, lty=2, lwd=2)
+abline(h=0.7, lty=2, lwd=2)
+abline(h=0.6, lty=2, lwd=2)
+abline(h=0.5, lty=2, lwd=2)
+abline(h=0.4, lty=2, lwd=2)
+abline(h=0.3, lty=2, lwd=2)
+abline(h=0.2, lty=2, lwd=2)
+abline(h=0.1, lty=2, lwd=2)
+abline(h=0.0, lty=2, lwd=2)
+
+abline(h=0.95, lty=2, lwd=0.5)
+abline(h=0.85, lty=2, lwd=0.5)
+abline(h=0.75, lty=2, lwd=0.5)
+abline(h=0.65, lty=2, lwd=0.5)
+abline(h=0.55, lty=2, lwd=0.5)
+abline(h=0.45, lty=2, lwd=0.5)
+abline(h=0.35, lty=2, lwd=0.5)
+abline(h=0.25, lty=2, lwd=0.5)
+abline(h=0.15, lty=2, lwd=0.5)
+abline(h=0.05, lty=2, lwd=0.5)
+}
+
+if(file.exists("temp0_0_-0.5")){
+png("ad00-0.5.png")
+t<-read.csv("temp0_0_-0.5", sep=",", header=FALSE)
+graph(0.6)
+dev.off()
+}
+
+if(file.exists("temp0_1_-0.5")){
+png("ad01-0.5.png")
+t<-read.csv("temp0_1_-0.5", sep=",", header=FALSE)
+graph(0)
+dev.off()
+}
+
+if(file.exists("temp1_0_-0.5")){
+png("ad10-0.5.png")
+t<-read.csv("temp1_0_-0.5", sep=",", header=FALSE)
+graph(0.6)
+dev.off()
+}
+
+if(file.exists("temp1_1_-0.5")){
+png("ad11-0.5.png")
+t<-read.csv("temp1_1_-0.5", sep=",", header=FALSE)
+graph(0)
+dev.off()
+}
+
+if(file.exists("temp0_0_0")){
+png("ad000.png")
+t<-read.csv("temp0_0_0", sep=",", header=FALSE)
+graph(0.6)
+dev.off()
+}
+
+if(file.exists("temp0_1_0")){
+png("ad010.png")
+t<-read.csv("temp0_1_0", sep=",", header=FALSE)
+graph(0)
+dev.off()
+}
+
+if(file.exists("temp1_0_0")){
+png("ad100.png")
+t<-read.csv("temp1_0_0", sep=",", header=FALSE)
+graph(0.6)
+dev.off()
+}
+
+if(file.exists("temp1_1_0")){
+png("ad110.png")
+t<-read.csv("temp1_1_0", sep=",", header=FALSE)
+graph(0)
+dev.off()
+}
+
+if(file.exists("temp0_0_0.5")){
+png("ad000.5.png")
+t<-read.csv("temp0_0_0.5", sep=",", header=FALSE)
+graph(0.6)
+dev.off()
+}
+
+if(file.exists("temp0_1_0.5")){
+png("ad010.5.png")
+t<-read.csv("temp0_1_0.5", sep=",", header=FALSE)
+graph(0)
+dev.off()
+}
+
+if(file.exists("temp1_0_0.5")){
+png("ad100.5.png")
+t<-read.csv("temp1_0_0.5", sep=",", header=FALSE)
+graph(0.6)
+dev.off()
+}
+
+if(file.exists("temp1_1_0.5")){
+png("ad110.5.png")
+t<-read.csv("temp1_1_0.5", sep=",", header=FALSE)
+graph(0)
+dev.off()
+}

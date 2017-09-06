@@ -1,0 +1,4 @@
+tint<-function(COL, x)
+{
+	colorRampPalette(c(COL, "white"))(256)[round(x*256)]
+}

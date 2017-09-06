@@ -43,14 +43,12 @@ get_comps<-function(A, sA, D, sD, G, sG, d, sid, z){
 	return(list(a_hat, d_hat, i_hat) )
 }
 
-mapgd <- readLines("../analysis_files/mapgd_relatedness.out")
-mapgd <- mapgd[-1]
-mapgd <- mapgd[-1]
-mapgd <- head(mapgd,-1)
-mapgd <- read.csv(textConnection(mapgd), sep="	", header=FALSE)
-mapgd[1:2,]
+strs <- readLines(gzfile("../analysis_files/true_relatedness.out.gz"))
+#strs <- readLines("../analysis_files/mapgd_relatedness.out")
+mapgd<-head(read.csv(text=strs, skip=2, nrows=length(strs) - 3, header=FALSE, sep ='	'), -1)
 
-pheno<-read.csv("../analysis_files/plink.pheno", sep="	", header=FALSE)
+
+pheno<-read.csv("../analysis_files/plink_1.0.0.pheno", sep="	", header=FALSE)
 N<-length(pheno$V3)
 
 z<-matrix(pheno$V3, ncol=1, nrow=N)
@@ -63,7 +61,7 @@ D<-matrix(nrow=N,ncol=N)
 F<-matrix(nrow=N,ncol=N)
 f<-matrix(nrow=N,ncol=1)
 
-for (i in 1:(length(mapgd$V1)+1))
+for (i in 1:(length(mapgd$V1)))
 {
 	x<-mapgd[i,]
 	A[x$V1+1, x$V2+1]<-x$V7

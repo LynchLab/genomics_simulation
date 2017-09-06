@@ -22,11 +22,16 @@ for line in var_file:
 		except:
 			K=0
 	try:
-		AC=float(keys["AC"])
-		AN=float(keys["AN"])
-		VR_FREQ=AC/AN
-		Q=line[5]
+		if "AF" not in keys.keys():
+			AC=float(keys["AC"])
+			AN=float(keys["AN"])
+			VR_FREQ=AC/AN
+			Q=line[5]
+		else:
+			VR_FREQ=float(keys["AF"])
+			Q=line[5]
 	except:
+		print line[7]
 		continue
 	try:
 		H=float(keys["InbreedingCoeff"])

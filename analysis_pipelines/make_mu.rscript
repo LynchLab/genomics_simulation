@@ -1,0 +1,43 @@
+MU<-matrix(ncol=N, nrow=N)
+RS<-matrix(ncol=N, nrow=N)
+FS<-matrix(ncol=N, nrow=N)
+
+for (x in 1:length(t$X))
+{
+	MU[t[x,]$X+1, t[x,]$Y+1]=t[x,]$MU/(t[x,]$K1*a+t[x,]$K2*(1-a) )
+	MU[t[x,]$Y+1, t[x,]$X+1]=t[x,]$MU/(t[x,]$K1*a+t[x,]$K2*(1-a) )
+
+	RS[t[x,]$X+1, t[x,]$Y+1]=t[x,]$RSQ
+	RS[t[x,]$Y+1, t[x,]$X+1]=t[x,]$RSQ
+
+	FS[t[x,]$X+1, t[x,]$Y+1]=t[x,]$F
+	FS[t[x,]$Y+1, t[x,]$X+1]=t[x,]$F
+}
+
+rangemean<-function(X, Y, steps)
+{
+	min<-min(Y, na.rm=TRUE)
+	max<-max(Y, na.rm=TRUE)
+	range<-max-min
+	step_size<-range/steps
+	means<-matrix(0,ncol=2, nrow=steps)
+	xsize<-length(X)
+	for (x in 1:steps) {
+		for (y in 1:xsize) {
+			if (!is.na(Y[y]) ){
+				if (!is.na(X[y]) ){
+					if (Y[y]>=(min+step_size*(x-1) ) && Y[y]<=(min+step_size*x) )
+					{
+						means[x,1]=means[x,1]+X[y] 
+						means[x,2]=means[x,2]+1
+					}
+				}
+			}
+		}
+	}
+	for (x in 1:steps) {
+		means[x,2]=means[x,1]/means[x,2] 
+		means[x,1]=min+step_size*(x-0.5)
+	}
+	means
+}

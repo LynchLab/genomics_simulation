@@ -1,0 +1,4 @@
+readmap<-function(filename)
+{
+	readcsv(read.csv(filename, sep="	", skip=1) -1)
+}

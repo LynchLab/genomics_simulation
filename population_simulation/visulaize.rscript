@@ -1,0 +1,64 @@
+
+
+temp<-head(read.csv("t0.txt", sep="	", skip=1), -1)
+N<-dim(temp)[1]
+
+skip<-50
+
+T<-length(list.files(pattern="t[0123456789]+.txt"))
+#/skip
+temp<-head(read.csv("b0.txt", sep="	", skip=1), -1)
+B<-length(temp$X.FREQ)
+
+
+pxcol<-matrix(ncol=N, nrow=T)
+z<-matrix(ncol=N, nrow=T)
+a<-matrix(ncol=B, nrow=T)
+d<-matrix(ncol=B, nrow=T)
+
+pos<-head(read.csv("cord-file.txt", sep="	", skip=1), -1)
+means<-c()
+for (x in 1:T )
+{
+	line<-t(head(read.csv(paste("t", (x-1)*skip,".txt", sep=""), sep="	", skip=1), -1)$TRAIT1)
+	lmin<-min(line)
+	lmax<-max(line)
+	lmean<-mean(line)
+	l1<-abs(lmean-line)/max(lmean-lmin,lmax-lmean)
+	l2<-abs(line-lmean)/max(lmean-lmin,lmax-lmean)
+	px<-line
+	for (j in 1:N)
+	{
+		if(line[j]>=lmean)
+		{
+			px[j]<-rgb(1, 1-l1[j], 1-l1[j])
+		} 
+		else 
+		{
+			px[j]<-rgb(1-l2[j], 1-l2[j], 1)
+		}
+	}
+	pxcol[x, ]<-px
+	z[x,]<-line
+	means<-c(means, lmean)
+	line<-head(read.csv(paste("b", (x-1)*skip,".txt", sep=""), sep="	", skip=1, na.strings=c("NaN", "-nan") ), -1)
+	a[x,]<-line$A
+	d[x,]<-line$D
+}
+
+source("figures.conf")
+LABSIZE<-2
+
+for (x in 1:T){
+	png(sprintf("frame%03d.png", x-1 ) )
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot((pos$LAT-pi)*cos(pos$LONG-pi/2), pos$LONG, col=pxcol[x,], pch=15, cex=1.9*sqrt(1200/N), xlab="LON", ylab="LAT", lwd=LINESIZE, cex.lab = LABSIZE, cex.axis = AXISSIZE)
+	mtext(sprintf("w = %0.3f", means[x]), side=1, line=3, adj=0,  cex = LABSIZE)
+	mtext(paste("t = ", x*skip), side=1, line=3, adj=1, cex = LABSIZE)
+
+	rect(-3.6,1.9,-0.8,3.4, col="white")
+	par(fig = c(0.07, 0.5, 0.5, 0.98), new = T)
+	plot((1:B)/B, a[x,], pch=20, ann=FALSE, col=rgb(0,0,0), ylim=c(-0.004,0.004) )
+	points((1:B)/B, d[x,], pch=20, col=rgb(1,0,0), ylim=c(-0.002,0.002) )
+	dev.off()
+}

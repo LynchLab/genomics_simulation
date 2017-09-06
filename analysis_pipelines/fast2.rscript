@@ -1,0 +1,71 @@
+make_K <- function(n, d){
+	return (cbind(diag(rep(1,n) )[ , c( (d+1):n)], diag(rep(1, n) )[ , c(1:d)]))
+}
+
+join <- function(matricies){
+	nmatrix<-length(matricies)
+	rnm<-sqrt(nmatrix)
+	msize<-nrow(matricies[[1]])
+	fsize<-rnm*msize
+	q<-msize*nmatrix
+	ret<-matrix( c(rep(0, q) ), ncol=fsize, nrow=fsize) 
+	col<-0
+	row<-0
+	message(rnm)
+	for (X in 0:(rnm-1))
+	{
+		for (Y in 0:(rnm-1))
+		{
+			m<-matricies[[X*rnm+Y+1]]
+			for (x in 1:msize)
+			{
+				for (y in 1:msize)
+				{
+					ret[X*msize+x,Y*msize+y]<-m[x,y]
+				}
+			}
+			message(X*rnm+Y)
+		}
+	}
+	return(ret) 
+}
+
+get_comps<-function(X, A, sA, D, sD, G, sG, sE, z){
+	N<-ncol(A)
+	I<-diag(N)
+
+	V<-join(list(t(X) %*% X, t(X) %*% (I+sD/sA*D %*% solve(A) ), X, I+sD/sA*D %*% solve(A)+sE/sA*solve(A) ) )
+	Z<-matrix(c(t(X) %*% z, z), ncol=1, nrow=N+1)
+	sol<-solve(V) %*% Z
+	e_hat<-sol[1]
+	a_hat<-sol[2:N]
+	return(list(e_hat, a_hat ) )
+}
+
+A<-as.matrix(read.csv("A.csv", sep=",", header=FALSE))
+D<-as.matrix(read.csv("D.csv", sep=",", header=FALSE))
+G<-as.matrix(read.csv("G.csv", sep=",", header=FALSE))
+F<-as.matrix(read.csv("F.csv", sep=",", header=FALSE))
+
+pheno<-read.csv("../analysis_files/plink.pheno", sep="	", header=FALSE)
+N<-length(pheno$V3)
+
+z<-matrix(pheno$V3, ncol=1, nrow=N)
+
+a<-matrix(pheno$V4, ncol=1, nrow=N)
+d<-matrix(pheno$V5+pheno$V6, ncol=1, nrow=N)
+e<-matrix(pheno$V7, ncol=1, nrow=N)
+
+sA<-var(a)[1,1]
+sD<-var(d)[1,1]
+sG<-cov(a,d)[1,1]
+sE<-var(e)[1,1]
+
+X<-matrix(c(rep(1, N)), ncol=1, nrow=N)
+
+l<-get_comps(X, A, sA, D, sD, G, sG, sE, z)
+
+e_hat<-l[[1]]
+a_hat<-l[[2]]
+
+plot(a_hat, a)

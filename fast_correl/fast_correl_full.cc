@@ -1,29 +1,80 @@
 #include "circular_list.h"
+#include "interface.h"
+#include "map_file.h"
+#include "state.h"
+#include "sample_name.h"
+#include "relatedness_data.h"
+#include "triu_index.h"
+
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
 #include <cstring>
+#include <sstream>
+#include <tuple>
+#include <map>
+#include <fstream>
 
-class Slow_index
+#define BUFFER_SIZE2	1000
+#define WORD	32
+#define UINT	uint32_t
+#define STEP	N9 << 1	
+#define BLOCK	256
+
+uint64_t LIM;
+uint64_t N;
+uint64_t N9;
+uint64_t SIZE;
+uint64_t XMIN;
+
+inline size_t hash(const Triangular_index &T, const Triangular_index &t, const uint16_t &d, const uint16_t &i, const uint16_t &j)
 {
-	private:
-	size_t _1, _2, _3, _4, _5;
-	public:
-	Slow_index(const size_t &_N)
-	{	
-		_1=9*_N*_N;
-		_2=9*_N; 
-		_3=9;
-		_4=3;
-	}
 
-	//d1(N), x(N), y(N), i(3), j(3) 
+	return ( (T.get_k()-t.get_k() ) << 1)*N9+9*d+3*i+j;
 
-	const size_t 	
-	operator () (const uint32_t &c, const uint32_t &x, const uint32_t &y, const uint32_t &i, const uint32_t &j)	{return c*_1+x*_2+y*_3+i*_4+j;};
-};
+	/*if (ret>=SIZE) 
+	{
+		std::cerr << "out of bounds " << T.get_k() << ", " << d << ", " << ", " << i << ", " << j << std::endl;
+		std::cerr << ret << " of "<< SIZE << std::endl;
+		exit(0);
+	}*/
+	//return ret;
+}
 
-static uint32_t Mask[32]={0x00000001, 0x00000002, 0x00000004, 0x00000008,
+inline size_t hash2(const uint16_t &d, const uint16_t &i, const uint16_t &j)
+{
+
+	return 9*d+3*i+j;
+
+	/*if (ret>=SIZE) 
+	{
+		std::cerr << "out of bounds " << T.get_k() << ", " << d << ", " << ", " << i << ", " << j << std::endl;
+		std::cerr << ret << " of "<< SIZE << std::endl;
+		exit(0);
+	}*/
+	//return ret;
+}
+
+//STATE FILE
+/*			0x0000000000000001, 0x0000000000000002, 0x0000000000000004, 0x0000000000000008, 
+			0x0000000000000010, 
+			0x0000000000000100, 
+			0x0000000000001000, 
+			0x0000000000010000, 
+			0x0000000000100000, 
+			0x0000000001000000, 
+			0x0000000010000000, 
+			0x0000000100000000, 
+			0x0000001000000000, 
+			0x0000010000000000, 
+			0x0000100000000000, 
+			0x0001000000000000, 
+			0x0010000000000000, 
+			0x0100000000000000, 
+			0x1000000000000000, 
+}*/
+
+static UINT Mask[WORD]={0x00000001, 0x00000002, 0x00000004, 0x00000008,
 			0x00000010, 0x00000020, 0x00000040, 0x00000080,
 			0x00000100, 0x00000200, 0x00000400, 0x00000800,
 			0x00001000, 0x00002000, 0x00004000, 0x00008000,
@@ -32,9 +83,8 @@ static uint32_t Mask[32]={0x00000001, 0x00000002, 0x00000004, 0x00000008,
 			0x01000000, 0x02000000, 0x04000000, 0x08000000,
 			0x10000000, 0x20000000, 0x40000000, 0x80000000};
 
-inline int get(const uint32_t *place, const uint32_t &x, const uint32_t &bit)
+inline int get(const UINT *place, const UINT &x, const UINT &bit)
 {
-	//nstd::cerr << "(" << x << ")" << std::endl;
 	if ((*(place+x) & Mask[bit])!=0 ){
 		return 1;
 	} else  {
@@ -42,14 +92,11 @@ inline int get(const uint32_t *place, const uint32_t &x, const uint32_t &bit)
 	}
 }
 
-inline void fast_bit_sumN(const uint32_t *place, const uint32_t &N, uint32_t *sum)
+inline void fast_bit_sumN(const UINT *place, const UINT &N, UINT *sum)
 {
-	const uint32_t *end=place+N;
-	const uint32_t *this_place=place;
+	const UINT *end=place+N;
+	const UINT *this_place=place;
 	while (this_place!=end) {
-		//if((*this_place & mask)==0) std::cerr << 0; 
-		//else std::cerr << 1;
-		//if((*(this_place+1) & mask)==0) std::cerr << 0; 
 		sum[0]+=( (*this_place & Mask[0])!=0 );
 		sum[1]+=( (*this_place & Mask[1])!=0 );
 		sum[2]+=( (*this_place & Mask[2])!=0 );
@@ -84,134 +131,242 @@ inline void fast_bit_sumN(const uint32_t *place, const uint32_t &N, uint32_t *su
 		sum[31]+=( (*this_place & Mask[31])!=0 );
 		this_place++;
 	}
-//	for (size_t x=0; x<N-2; ++x) (*sum)+=get(place, x, bit);
 }
 
-inline void fast_het_sumN(const uint32_t *place, const uint32_t &N, const uint32_t &bit, uint32_t *sum)
+inline void fast_het_sumN(const UINT *place, const UINT &N, const UINT &bit, UINT *sum)
 {
-	const uint32_t *end=place+N;
-	const uint32_t *this_place=place;
-	uint32_t mask=Mask[bit];
+	const UINT *end=place+N;
+	const UINT *this_place=place;
+	UINT mask=Mask[bit];
 	while (this_place!=end) {
-		//if((*this_place & mask)==0) std::cerr << 0; 
-		//else std::cerr << 1;
-		//if((*(this_place+1) & mask)==0) std::cerr << 0; 
-		//else std::cerr << 1;
 		*sum+=( (*this_place & mask)!=(*(++this_place) & mask) );
 		this_place++;
 	}
 }
 
-/*const size_t & fast_index(const uint &d, const uint32_t &i, const uint32_t &j)
-{
-	return _index[d][i][j];
-}*/
-
 int main (int argc, char **argv){
 
-uint64_t N=atoi(argv[1]);
+	std::string names_file="", input_file="";
+	int indX=-1, indY=-1;
+	std::string namex="", namey="";
 
-uint64_t SIZE=9*2*N*N*N; 
-uint32_t BLOCK_SIZE=2*N;
-//HUGE!!!
-uint16_t *D=new uint16_t [SIZE];
-//SMALL
-uint32_t * bit=new uint32_t [N*2];
+	Environment env;
+	env.set_name("call_relatedness");
+        env.set_version(VERSION);
+        env.set_author("Matthew Ackerman");
+        env.set_description("A POS relatedness caller. Please direct questions to matthew.s.ackerman@gmail.com");
 
+        env.optional_arg('x',"namey",  namex,      "please provide a number.", "number of individuals in the populations.");
+        env.optional_arg('y',"namex",  namey,      "please provide a number.", "number of individuals in the populations.");
+        env.optional_arg('i',"input",  input_file,      "please provide a number.", "number of individuals in the populations.");
+        env.positional_arg('n',"names",  names_file,      "please provide a number.", "number of individuals in the populations.");
 
-Slow_index slow_index(N);
+	if ( parsargs(argc, argv, env) != 0 ) print_usage(env);
 
-std::cerr << ": " << N << "--" << SIZE << " " << slow_index(2*N-1, N-1, N-1, 3-1, 3-1) << std::endl;
-
-std::istream *in=&std::cin;
-	
-uint32_t readed=0;
-
-while(in->read((char *)(bit), BLOCK_SIZE*sizeof(uint32_t) ) )
-{
-	uint32_t d1[32]={0};
-//	std::cerr << "SUM...\n";
-	fast_bit_sumN(bit, N*2, d1);
-//	std::cerr << "DONE...\n";
-#pragma 
-	for (size_t x=0; x<N*2; x+=2)
-	{
-		for (size_t y=x+2; y<N*2; y+=2)
+	State Pstates;
+ 	{
+		Flat_file <State> state_file;
+		if (input_file=="")
 		{
-			for (size_t k=0; k<32; k++)
-			{
-	//			memset(bit, 2, 2*N*sizeof(uint32_t) );
-				uint32_t mask=Mask[k];
-
-				int i=get(bit, x, k)+get(bit, x+1, k);
-				int j=get(bit, y, k)+get(bit, y+1, k);
-				//int j=(*(bit+y) & mask)!=0+(*(bit+y+1) & mask)!=0;
-				//nstd::cerr << d1 << std::endl;
-				//d1[k]-=(i+j);
-				//std::cerr << "D1 " << d1[k] << ": " << i << ": " << j << std::endl;
-				//std::cout << d1 << " " << d2 << " (" << x/2 << " " << y/2 << ": " << k << ") " << i << " " << j << " " << *(D+slow_index(d1, d2, x/2, y/2, i, j)) << "->";
-				(*(D+slow_index(d1[k]-(i+j), x/2, y/2, i, j) ) )++;
-				//std::cout << " " << *(D+slow_index(d1, d2, x/2, y/2, i, j)) << std::endl;
-			}
+			state_file.open(READ);
 		}
+		else
+		{
+			state_file.open(input_file.c_str(), READ);
+		}
+		Pstates=state_file.read_header();
+		state_file.read(Pstates);
+		state_file.close();
+		std::cerr << Pstates.sample_size() << ", " << Pstates.genome_size() << std::endl;
 	}
-}
-
-std::cerr << "done reading." << std::endl;
-
-std::cout << "@NAME:RELATEDNESS	VERSION:0.4.27-2016-12-20	FORMAT:TEXT	CONCATENATED \n@SAMPLE_X	SAMPLE_Y	f_X	f_X_ll	f_Y	f_Y_ll	θ_XY	θ_ll	γ_XY	γ_XY_ll	γ_YX	γ_YX_ll	δ	δ_ll	Δ	Δ_ll	null_ll	fit\n";
-/* rho_xy|z=rho_xy-rho_xz*rho_yz/( sqrt(1-rho_xz^2)*rho(1-rho_yz^2) */
-
-double f_X=0, f_X_w=0, f_Y=0, f_Y_w=0, Theta=0, Theta_w=0, gamma_XY=0, gamma_XY_w=0, gamma_YX=0, gamma_YX_w=0, Z=0, Z_w=0;
-double mu, k1, k2;
-
-gsl_multifit_linear_workspace * work = gsl_multifit_linear_alloc (pow(N*2-1, 1), 2);
-gsl_matrix *X = gsl_matrix_alloc (pow(N*2-1, 1), 2);
-gsl_matrix *XINV = gsl_matrix_alloc (pow(N*2-1, 1), 2);
-gsl_vector *y = gsl_vector_alloc (pow(N*2-1, 1) );
-gsl_vector *w = gsl_vector_alloc (pow(N*2-1, 1) );
-gsl_vector *c = gsl_vector_alloc (2);
-gsl_matrix *cov = gsl_matrix_alloc (2, 2);
-double chisq;
 
 
-for (size_t x=0; x<N; x++)
-{
-	for (size_t Y=x+1; Y<N; Y++)
+	Flat_file <Sample_name> in_names;
+	Sample_name names;
+	in_names.open(names_file.c_str(), std::ios::in);
+	names=in_names.read_header();
+	while (in_names.read(names).table_is_open() );
+
+	N=names.sample_names.size();
+	N9=N*9;
+
+	if (namex!="") {
+		indX=find(names.sample_names.begin(), names.sample_names.end(), namex) - names.sample_names.begin();
+	}
+	if (namey!="") {
+		indY=find(names.sample_names.begin(), names.sample_names.end(), namey) - names.sample_names.begin();
+	}
+
+	//Maximum number of uint16_t to allocate
+	//4 Gb =   2000000000
+	SIZE=9000000;
+	UINT BLOCK_SIZE=2*N;
+
+	UINT *P1=new UINT [N*2*BLOCK];
+	UINT *P2=P1+N;
+	UINT P_step=N*2;
+
+	//Need to be private
+	Triangular_index T_MIN(N), T_MAX(N);
+	Triangular_index T(N);
+	uint16_t *D=new uint16_t [SIZE*BLOCK];
+
+	Relatedness buffer_rel[BUFFER_SIZE2];        
+
+	Flat_file <Relatedness> rel_file;
+	rel_file.open(WRITE);
+	rel_file.write_header(buffer_rel[0]);        
+
+	size_t J=std::min(BUFFER_SIZE2, int(T.size()-T.get_k()) );
+	Pstates.rewind();
+
+	while (J>0)
 	{
+	std::cerr << "start:" << J << std::endl;
+
+	for (size_t z=0; z<J; ++z)
+	{
+		gsl_multifit_linear_workspace * work = gsl_multifit_linear_alloc (pow(N*2-1, 1), 2);
+		gsl_matrix *X = gsl_matrix_alloc (pow(N*2-1, 1), 2);
+		gsl_matrix *XINV = gsl_matrix_alloc (pow(N*2-1, 1), 2);
+		gsl_vector *Y = gsl_vector_alloc (pow(N*2-1, 1) );
+		gsl_vector *w = gsl_vector_alloc (pow(N*2-1, 1) );
+		gsl_vector *c = gsl_vector_alloc (2);
+		gsl_matrix *cov = gsl_matrix_alloc (2, 2);
+
+		if (indX!=-1 or indY!=-1)
+		{
+			T.set(indX, indY);
+		}
+	
+		if (T>=T_MAX ) 
+		{
+			State_stream state_ptr;//=
+			Pstates.set_stream(state_ptr);
+			memset(D, 0, sizeof(uint16_t)*SIZE);
+			T_MIN=T;
+			T_MAX=T+SIZE/(2*9*N);
+			if (T_MAX.get_k() > T.size() ) T_MAX.set(N-1, N);
+			//CHANGE TO LOOP
+			size_t size=Pstates.genome_size();
+			
+			//UINT (T_MAX.get_k()-T_MIN.get_k() )*32		
+	
+			//size_t inc_size=SIZE/(2*9*N)*32;
+			//size_t *inc=new size_t [inc_size]{0};
+			clock_t time1, time2;
+
+			//#pragma omp parallel for private(D)
+			for (size_t l=0;l<size;l+=BLOCK)
+			{
+#ifdef DEBUG
+				time1=clock();
+#endif
+				UINT this_block=BLOCK;
+				if(size-l<BLOCK)
+					this_block=size-l;
+				
+				{	
+				UINT *P1_ptr=P1;
+				UINT *P2_ptr=P2;
+
+				for (size_t ll=0;ll<this_block;++ll)
+				{
+					Pstates.uncompress(P1_ptr, P2_ptr, state_ptr);
+					P1_ptr+=P_step;
+					P2_ptr+=P_step;
+				}
+				}
+
+				UINT d1[WORD*BLOCK]={0};
+				UINT d_step=WORD;
+
+				{
+				UINT *P1_ptr=P1;
+				UINT *d1_ptr=d1;
+				for (size_t ll=0;ll<this_block;++ll)
+				{
+					fast_bit_sumN(P1_ptr, 2*N, d1_ptr);
+					d1_ptr+=d_step;
+					P1_ptr+=P_step;
+				}
+				}
+				
+				#pragma omp parallel for 
+				for (Triangular_index t=T_MIN; t<T_MAX; ++t)
+				{ 
+					size_t x, y;
+					t.get_xy(x,y);
+					uint16_t *D_ptr=D+(t.get_k()-T_MIN.get_k())*(STEP);
+					UINT *d1_ptr=d1;
+					UINT *P1_ptr=P1;
+					UINT *P2_ptr=P2;
+
+					for (size_t ll=0;ll<this_block;++ll)
+					{
+						for (size_t k=0; k<WORD; ++k)
+							D_ptr[hash2(d1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k))]++;
+							//D[hash(t, T_MIN, d1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k))]++;
+
+						d1_ptr+=d_step;
+						P1_ptr+=P_step;
+						P2_ptr+=P_step;
+					}
+				}
+#ifdef DEBUG
+				time2=clock();
+				std::cerr << l << " : of " << size << " : " << (SIZE*BLOCK)/double(time2-time1) << std::endl;
+#endif
+			}
+			//delete [] inc;
+		}
+
+		double f_X=0, f_X_w=0, f_Y=0, f_Y_w=0, Theta=0, Theta_w=0, gamma_XY=0, gamma_XY_w=0, gamma_YX=0, gamma_YX_w=0, Z=0, Z_w=0;
+		double mu, k1, k2;
+
+		double chisq;
+
 		Theta_w=0;
 		Theta=0;
 		f_X=0;
 		f_X_w=0;
 		f_Y=0;
 		f_Y_w=0;
-		for (size_t c2=1; c2<(N-1)*2; c2++)
-		{
-				double d2=double(c2)/double(N*2-2);
+		gamma_XY=0;
+		gamma_XY_w=0;
+		gamma_YX=0;
+		gamma_YX_w=0;
+		size_t c2_min = 0;
 
-				double mmmm=double(*(D+slow_index(c2, x, Y, 0, 0)));
-				double Mmmm=double(*(D+slow_index(c2, x, Y, 1, 0)));
-				double MMmm=double(*(D+slow_index(c2, x, Y, 2, 0)));
-				double mmMm=double(*(D+slow_index(c2, x, Y, 0, 1)));
-				double MmMm=double(*(D+slow_index(c2, x, Y, 1, 1)));
-				double MMMm=double(*(D+slow_index(c2, x, Y, 2, 1)));
-				double mmMM=double(*(D+slow_index(c2, x, Y, 0, 2)));
-				double MmMM=double(*(D+slow_index(c2, x, Y, 1, 2)));
-				double MMMM=double(*(D+slow_index(c2, x, Y, 2, 2)));
+		for (size_t c2=(1+c2_min); c2<((N-1)*2-c2_min); c2++)
+		{
+				//x,y
+				double d2=double(c2)/double(N*2-4);
+
+				double mmmm=double(D[hash(T, T_MIN, c2, 0, 0)]);
+				double Mmmm=double(D[hash(T, T_MIN, c2, 1, 0)]);
+				double MMmm=double(D[hash(T, T_MIN, c2, 2, 0)]);
+				double mmMm=double(D[hash(T, T_MIN, c2, 0, 1)]);
+				double MmMm=double(D[hash(T, T_MIN, c2, 1, 1)]);
+				double MMMm=double(D[hash(T, T_MIN, c2, 2, 1)]);
+				double mmMM=double(D[hash(T, T_MIN, c2, 0, 2)]);
+				double MmMM=double(D[hash(T, T_MIN, c2, 1, 2)]);
+				double MMMM=double(D[hash(T, T_MIN, c2, 2, 2)]);
 
 				double Den=mmmm+Mmmm+MMmm+mmMm+MmMm+MMMm+mmMM+MmMM+MMMM;
 
-				double OX=((Mmmm+MmMm+MmMM)/2.+MMmm+MMMm+MMMM)/Den;
-				double OY=((mmMm+MmMm+MMMm)/2.+mmMM+MmMM+MMMM)/Den;
+				double OX=((Mmmm+MmMm+MmMM)/2.+MMmm+MMMm+MMMM+1)/Den;
+				double OY=((mmMm+MmMm+MMMm)/2.+mmMM+MmMM+MMMM+1)/Den;
 
-				//OX=d1;
-				//OY=d2;
+				OX=d2;
+				OY=d2;
 
-				if (Den>10 && OX > 0 && OY > 0 && OX < 1 && OY <1 && OX!=0.5 && OY != 0.5)
+				double M=(OX+OY)/2.;
+
+				//std::cerr <<  mmmm << ", " << Mmmm << ", " << MMmm << ", " << mmMm << ", " << MmMm << ", " << MMMm << ", " << mmMM << ", " <<  MmMM << ", " << MMMM << ", " << d2 << std::endl;
+
+				if (OX > 0 && OY > 0 && OX < 1 && OY <1 && M!=0.5 && Den > 0)
 				{
-					double M=(OX+OY)/2.;
-					//std::cerr << OX << " " << OY << " " << Den << " " << d1 << " " << d2 << std::endl; 
-
 					Theta+=(mmmm*(0-OX)*(0-OY)+Mmmm*(1.0-OX)*(0-OY)/2.+MMmm*(1.-OX)*(0-OY)
 								  +Mmmm*(0.0-OX)*(0-OY)/2.
 						   +mmMm*(0-OX)*(1.0-OY)/2.+MmMm*(0.0-OX)*(0.0-OY)/4.+MMMm*(1.-OX)*(0.0-OY)/2.
@@ -232,10 +387,7 @@ for (size_t x=0; x<N; x++)
 						   +mmMm*(0.-OY)*(1.-OY)+MmMm*(0.-OY)*(1.-OY)+MMMm*(0.-OY)*(1.-OY)
 						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) );
 					f_Y_w+=Den;
-		/*		}
-		}
-		for (size_t c2=1; c2<(N-1)*2; c2++)
-		{*/
+
 					gamma_XY+=(mmmm*(0-OX)*(0-OX)*(0-OY)+Mmmm*(0.-OX)*(1.-OX)*(0-OY)+MMmm*(1.-OX)*(1.-OX)*(0-OY)
 							+(mmMm*(0-OX)*(0-OX)*(1.-OY)+MmMm*(1.-OX)*(0.-OX)*(1.-OY)+MMMm*(1.-OX)*(1.-OX)*(1.-OY) )/2.
 							+(mmMm*(0-OX)*(0-OX)*(0.-OY)+MmMm*(1.-OX)*(0.-OX)*(0.-OY)+MMMm*(1.-OX)*(1.-OX)*(0.-OY) )/2.
@@ -246,12 +398,9 @@ for (size_t x=0; x<N; x++)
 									    +Mmmm*(0.-OY)*(0.-OY)*(1.0-OX)/2.
 							+mmMm*(1.-OY)*(0.-OY)*(0.-OX)+MmMm*(1.-OY)*(0.-OY)*(0.0-OX)/2.+MMMm*(1.-OY)*(0.-OY)*(1.-OX)
 									   	     +MmMm*(1.-OY)*(0.-OY)*(1.0-OX)/2.
-							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(0.0-OX)/2.+MMMM*(1.-OY)*(1.-OY)*(1.-OX) )/(M*(1-M)*(1-2*M) )
-									    	     +MmMM*(1.-OY)*(1.-OY)*(1.0-OX)/2.;
+							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(0.0-OX)/2.+MMMM*(1.-OY)*(1.-OY)*(1.-OX) 
+									    	     +MmMM*(1.-OY)*(1.-OY)*(1.0-OX)/2.)/(M*(1-M)*(1-2*M) );
 					gamma_YX_w+=Den;
-		/*}
-		for (size_t c2=1; c2<(N-1)*2; c2++)
-		{*/
 
 					mu=(mmmm*(0-OY)*(0-OY)*(0-OX)*(0-OX)+Mmmm*(0.-OY)*(0.-OY)*(1.-OX)*(0.0-OX)+MMmm*(0.-OY)*(0.-OY)*(1.-OX)*(1.-OX)
 							+mmMm*(1.-OY)*(0.-OY)*(0.-OX)*(0.-OX)+MmMm*(0.-OY)*(1.-OY)*(0.-OX)*(1.-OX)+MMMm*(0.-OY)*(1.-OY)*(1.-OX)*(1.-OX)
@@ -265,13 +414,24 @@ for (size_t x=0; x<N; x++)
 					gsl_matrix_set (X, c2, 0, k1);
 					gsl_matrix_set (X, c2, 1, k2);
       
-					gsl_vector_set (y, c2, mu);
+					gsl_vector_set (Y, c2, mu);
 					gsl_vector_set (w, c2, Den);
-			}
-		}
+				}
+				if (indX!=-1 or indY!=-1){
 
+					Theta_w=0;
+				        Theta=0;
+				        f_X=0;
+				        f_X_w=0;
+				        f_Y=0;
+				        f_Y_w=0;
+				        gamma_XY=0;
+				        gamma_XY_w=0;
+				        gamma_YX=0;
+			        	gamma_YX_w=0;
+				}
+		}
 /*
-		std::cerr << "HI!\n";
 		gsl_permutation *p = gsl_permutation_alloc(pow(N-1,2));
 		std::cerr << "This is bullshit1!\n";
 		int s;
@@ -286,13 +446,52 @@ for (size_t x=0; x<N; x++)
 		gsl_blas_dgemm (CblasNoTrans, CblasTrans, CblasNonUnit, *XINV, *X, CblasNonUnit, *XR);
 		gsl_blas_dgemv (CblasNoTrans, CblasNoTrans, CblasNonUnit, *XR, *y, CblasNonUnit, *c);*
 *///		gsl_multifit_wlinear (X, w, y, c, cov, &chisq, work);
-		gsl_multifit_wlinear (X, w, y, c, cov, &chisq, work);
+		gsl_multifit_wlinear (X, w, Y, c, cov, &chisq, work);
 //		gsl_multifit_linear_free (work);
+
 			
 #define beta(i) (gsl_vector_get(c,(i)))
+		if(indX!=-1 or indY!=-1) return 0;
 
-		std::cout << x << "\t" << Y << "\t" << f_X/f_X_w << "\t" << f_X_w << "\t" << f_Y/f_Y_w << "\t" << f_Y_w << "\t" << Theta/Theta_w << "\t" <<Theta_w <<"\t" << gamma_XY/gamma_XY_w << "\t" << gamma_XY_w << "\t" << gamma_YX/gamma_YX_w << "\t" << gamma_YX_w << "\t" << beta(1) << "\t" << "0" << "\t" << beta(0) << "\t" << std::endl;
+		buffer_rel[z].f_X_=f_X/f_X_w;
+		buffer_rel[z].f_X_ll=f_X_w;
+		buffer_rel[z].f_Y_=f_Y/f_Y_w;
+		buffer_rel[z].f_Y_ll=f_Y_w;
+		buffer_rel[z].theta_XY_=Theta/Theta_w;
+		buffer_rel[z].theta_XY_ll=Theta_w;
+		buffer_rel[z].gamma_XY_=gamma_XY/gamma_XY_w;
+		buffer_rel[z].gamma_XY_ll=gamma_XY_w;
+		buffer_rel[z].gamma_YX_=gamma_YX/gamma_YX_w;
+		buffer_rel[z].gamma_YX_ll=gamma_YX_w;
+		buffer_rel[z].Delta_XY_=beta(1);
+		buffer_rel[z].Delta_XY_ll=0;
+		buffer_rel[z].delta_XY_=beta(0);
+		buffer_rel[z].delta_XY_ll=0;
+		buffer_rel[z].null_ll_=0;
+		buffer_rel[z].max_ll_=0;
+		size_t x, y;
+		T.get_xy(x,y);
+		buffer_rel[z].set_X_name(x);
+		buffer_rel[z].set_Y_name(y);
+
+		if (T.get_k()!=T.size() ) ++T;
+
+		gsl_vector_free(Y);
+		gsl_vector_free(w);
+		gsl_vector_free(c);
+
+		gsl_matrix_free(X);
+		gsl_matrix_free(XINV);
+		gsl_matrix_free(cov);
+		
+		gsl_multifit_linear_free(work);
 	}
-}	
-	std::cout << "@END_TABE\n";
-}	
+	for (size_t z=0; z<J; ++z)
+		rel_file.write(buffer_rel[z]);
+		J=std::min(BUFFER_SIZE2, int(T.size()-T.get_k()) );
+	}
+	delete [] P1;
+	delete [] D;
+	rel_file.close();
+	//close();
+}

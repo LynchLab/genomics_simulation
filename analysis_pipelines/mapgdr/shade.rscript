@@ -1,0 +1,4 @@
+shade<-function(COL, x)
+{
+	colorRampPalette(c(COL, "black"))(256)[round(x*256)]
+}

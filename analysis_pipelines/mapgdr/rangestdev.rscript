@@ -1,0 +1,31 @@
+rangestdev<-function(X, Y, steps)
+{
+	min<-min(Y, na.rm=TRUE)
+	max<-max(Y, na.rm=TRUE)
+	range<-max-min
+	step_size<-range/steps
+	means<-matrix(0,ncol=3, nrow=steps)
+	xsize<-length(X)
+	for (x in 1:steps) {
+		for (y in 1:xsize) {
+			if (!is.na(Y[y]) ){
+				if (!is.na(X[y]) ){
+					if (Y[y]>=(min+step_size*(x-1) ) && Y[y]<=(min+step_size*x) )
+					{
+						means[x,1]=means[x,1]+X[y]
+						means[x,2]=means[x,2]+X[y]^2 
+						means[x,3]=means[x,3]+1
+					}
+				}
+			}
+		}
+	}
+	for (x in 1:steps) {
+		m=means[x,1]/means[x,3] 
+		ss=means[x,2]/means[x,3] 
+		means[x,1]=min+step_size*(x-0.5)
+		means[x,2]=m
+		means[x,3]=ss-m^2
+	}
+	means
+}

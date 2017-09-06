@@ -16,6 +16,7 @@ class state_file:
 	def set_sample(self, b, N, A, B):
 		rr=b%8
 		rl=int(b/8)
+#		print rl, b
 		mask=[0x0000001, 0x00000002, 0x00000004, 0x00000008,
 		      0x0000010, 0x00000020, 0x00000040, 0x00000080]
 		if A:

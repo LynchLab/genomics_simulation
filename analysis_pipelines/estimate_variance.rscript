@@ -1,0 +1,61 @@
+#!/usr/bin/env Rscript
+
+#argv = commandArgs(trailingOnly=TRUE)
+
+library(regress)
+#library(e1027)
+
+estimate_comp<-function(p)
+{
+	tV<-p[1]^2*A+2*p[2]^2*G+p[3]^2*(D2+p[4]^2*d) 
+	ret<-sum( (Z-tV)^2 )
+	message(ret, " ", p[1]^2, " ", p[2]^2, " ", p[3]^2, " ", p[4]^2)
+	return(ret)
+}
+
+A<<-as.matrix(read.csv("A.csv", sep=",", header=FALSE))
+D<-as.matrix(read.csv("D.csv", sep=",", header=FALSE))
+G<<-as.matrix(read.csv("G.csv", sep=",", header=FALSE))
+d<<-as.matrix(read.csv("d.csv", sep=",", header=FALSE))
+F<-as.matrix(read.csv("F.csv", sep=",", header=FALSE))
+
+D2<<-D+F
+A<-A*2
+#pheno<-read.csv(argv[1], sep="	", header=FALSE)
+pheno<-read.csv("../analysis_files/plink.pheno", sep="	", header=FALSE)
+
+f<-pheno$V9
+delta<-pheno$V5+pheno$V6
+alpha<-pheno$V4
+f_delta<-f*delta
+e<-pheno$V7
+
+N<-length(pheno$V3)
+z<-matrix(pheno$V4, ncol=1, nrow=N)
+
+Z<<-z %*% t(z)
+
+
+o<-optim(c(var(z)/2, 0, var(z)/2, 0), estimate_comp)
+#k<-solve(A)+(solve(A)-solve(G) )%*% solve( solve(D)-solve(G) )
+
+A<-A/mean(diag(A))
+D<-D/mean(diag(D))
+d<-d/mean(diag(d))
+G<-G/mean(diag(G))
+F<-F/mean(diag(F))
+
+#r<-regress(z~1, ~A+Z+G+d)
+
+fm<-mean(f)
+
+#sigmaA2<-r$sigma[1]*(1+fm)
+#sigmaAD<-r$sigma[3]*fm
+#A<-r$sigma[2]
+#B<-r$sigma[4]
+#k<-B/A
+#sigmaD2<-A^2/(A*(f^2+f+1)-B*fm)
+#sigmaE<-r$sigma[5]
+#write.csv(t(as.matrix(c(sigmaA2, sigmaD2, sigmaAD, k, sigmaE, var(alpha), var(delta), cov(alpha, delta), 0, var(e) ) ) ), "out.txt", row.names = FALSE)
+#write.table(t(as.matrix(c(0, 0, 0, 0, 0, 0, var(alpha), var(delta), cov(alpha, delta), cov(f, delta), var(e), sum(diag), mean(f+f^2), mean(f^2) ) ) ), sep=" ", "out.txt", row.names = FALSE)
+#write.csv(paste(summary(r) ), "out2.txt", row.names = FALSE)

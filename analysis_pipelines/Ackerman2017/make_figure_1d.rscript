@@ -3,6 +3,7 @@ mapgd<-read.csv("../analysis_files/mapgd_linkage-trim.csv", sep="\t", fill=TRUE,
 plink<-read.csv("../analysis_files/plink.ld", sep=" ", fill=TRUE, na.strings="NaN")
 
 source("figures.conf")
+source("rangemean.rscript")
 
 pdf("../figures/figure_1d.pdf")
 
@@ -20,8 +21,8 @@ m<-merge(m, plink, by=c("POS1", "POS2"), all.x=TRUE)
 k<-data.frame(V=c(0), W=c(0), X=c(0), Y=c(0), Z=c(0) )
 colnames(k)<-c("true", "mapgd_bias", "mapgd_rmse", "plink_bias", "plink_rmse")
 
-w<-0.05
-rs<-c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+w<-1/41
+rs<-c(c(seq(0, 25)/40))
 
 m<-m[,c("POS1","POS2", "TRUE_RSQ", "MAPGD_RSQ", "PLINK_RSQ") ]
 m<- na.omit(m)
@@ -42,5 +43,11 @@ polygon(c(k$true, rev(k$true) ), c(k$mapgd_bias-k$mapgd_rmse, rev(k$mapgd_bias+k
 polygon(c(k$true, rev(k$true) ), c(k$plink_bias-k$plink_rmse, rev(k$plink_bias+k$plink_rmse) ), border = "black", col =rgb(0,0,1,0.5), lty = par("lty") )
 
 abline(h = 0)
+
+dev.off()
+
+pdf("../figures/figure_1d.pdf")
+
+m<-rangestdev(m$TRUE_RSQ-m$MAPGD_RSQ, m$TRUE_)
 
 dev.off()

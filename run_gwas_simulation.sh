@@ -8,7 +8,7 @@ echo "simulating phenotypes"
 
 cd ./analysis_pipelines
 
-zcat ../sequences/states.txt.gz | python -u text_to_bin.py | python-2.7.9 -u states_to_vcf.py $SAMPLE ../sequences/name-file.txt > ../analysis_files/states.vcf
+zcat ../sequences/states.txt.gz | python -u text_to_bin.py | python-2.7.9 -u states_to_vcf.py ../sequences/name-file.txt > ../analysis_files/states.vcf
 zcat ../sequences/states.txt.gz | python -u text_to_bin.py | gzip - > ../sequences/states_bin.txt.gz
 zcat ../sequences/states_bin.txt.gz | ../fast_correl/call_relatedness $SAMPLE | gzip - > ../analysis_files/mapgd_relatedness.out.gz
 zcat ../analysis_files/mapgd_relatedness.out.gz | head -3 | tail -1 | cut -f 3 -d '	' > ../analysis_files/inbred

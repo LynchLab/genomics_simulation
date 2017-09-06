@@ -1,7 +1,7 @@
-POPULATION=200
+POPULATION=1200
 POP2=$((POPULATION/2))
 
-SAMPLE=50
+SAMPLE=1200
 SAMP=`seq 0 1 $((POPULATION-1)) | shuf | head -$SAMPLE`
 
 for s in $SAMP
@@ -18,13 +18,15 @@ TIME=$((1*POPULATION))
 TIMEX=$((9*PULATION+POPULATION/2))
 REF="reference.fa"
 COV=3
-K=100
+K=200
 SIZE=$(($K*640))        #make sure to use bwa mem!!
 SNPS=$(($K*10))
 REFTYPE='Y'
 
 LD_DIST=1000
 
+STRUCTURE="r"
+
 A=1
 D=0
-E=0.5
+E=1

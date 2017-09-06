@@ -10,9 +10,9 @@ gunzip ../analysis_files/states.vcf.gz
 plink --vcf ../analysis_files/states.vcf --make-bed --allow-extra-chr --out ../analysis_files/plink
 gzip -f ../analysis_files/states.vcf
 
-gcta64 --bfile ../analysis_files/plink --make-grm-gz --out ../analysis_files/gcta
-gcta64 --bfile ../analysis_files/plink --make-grm --out ../analysis_files/gcta
-gcta64 --grm ../analysis_files/gcta --pheno ../analysis_files/plink.pheno --reml --out ../analysis_files/test --thread-num 10 --grm-cutoff 0.125 --reml-pred-rand
+gcta64 --bfile ../analysis_files/plink --make-grm-gz --out ../analysis_files/gcta 2> /dev/null
+gcta64 --bfile ../analysis_files/plink --make-grm --out ../analysis_files/gcta 2> /dev/null
+#gcta64 --grm ../analysis_files/gcta --pheno ../analysis_files/plink.pheno --reml --out ../analysis_files/test --thread-num 10 --grm-cutoff 0.125 --reml-pred-rand
 
 # --reml-pred-rand
 #

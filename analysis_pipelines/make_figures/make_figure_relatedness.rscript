@@ -1,0 +1,54 @@
+strs <- readLines(gzfile("../analysis_files/true_relatedness.out.gz"))
+tru<-head(read.csv(text=strs, skip=2, nrows=length(strs) - 3, header=FALSE, sep ='	'), -1)
+strs <- readLines("../analysis_files/mapgd_relatedness.out")
+map<-head(read.csv(text=strs, skip=2, nrows=length(strs) - 3, header=FALSE, sep ='	'), -1)
+gcta<-read.csv(gzfile('../analysis_files/gcta.grm.gz'), header=FALSE, sep ='	')
+
+p<-matrix(nrow=501, ncol=100)
+
+#for(i in 1:100)
+#{
+#	plink<-read.csv( paste('../analysis_files/plink_', i, '.pheno', sep=""), header=FALSE, sep ='	')
+#	p[,i]<-plink$V4/sd(plink$V4, na.rm=TRUE)
+#}
+
+#C<-data.frame(V=c(0), W=c(0), X=c(0) )
+#colnames(C)<-c("X", "Y", "cov")
+
+
+#for(x in 1:500) {
+#	for (y in x:500) {
+#		C=rbind(C, c(x, y, cor(p[x,], p[y,])) ) 
+#	}
+#}
+
+pdf("../figures/figure_2.pdf")
+
+#source("figure.conf")
+#par(mar=MAR)
+m<-tru
+
+names(tru)[names(tru)=="V1"] <- "X"
+names(tru)[names(tru)=="V2"] <- "Y"
+
+names(map)[names(map)=="V1"] <- "X"
+names(map)[names(map)=="V2"] <- "Y"
+
+names(gcta)[names(gcta)=="V2"] <- "X"
+names(gcta)[names(gcta)=="V1"] <- "Y"
+
+
+gcta$X<-gcta$X-1
+gcta$Y<-gcta$Y-1
+
+m<-merge(tru, gcta, by=c("X", "Y") )
+m<-merge(m, map, by=c("X", "Y") )
+#m<-merge(m, C, by=c("X", "Y") )
+
+plot(m$V7.x, m$V4.y/2, xlab="true theta", ylab="est. theta", xlim=c(-0.075, 0.275), ylim=c(-0.075, 0.275), col="blue", pch=20)
+points(m$V7.x, m$V7.y, xlab="true theta", ylab="est. theta", xlim=c(-0.075, 0.275), ylim=c(-0.075, 0.275), col="red", pch=20)
+#points(m$V7.x, m$cov, xlab="true theta", ylab="est. theta", xlim=c(-0.075, 0.275), ylim=c(-0.075, 0.275), col="green", pch=20)
+
+
+abline(a=0, b=1)
+dev.off()

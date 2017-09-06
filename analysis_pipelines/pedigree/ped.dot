@@ -1,0 +1,58 @@
+digraph G {
+bgcolor="transparent"
+
+	node [shape=circle, label=""]
+	{
+		11 [shape=circle, FIXEDSIZE="true", image="hatching.png", label=""]
+//		11 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=diagonals]
+		10 [shape=circle, fillcolor="#ffffff", fixedsize=true, label="", style=filled]
+		13 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		12 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		15 [shape=circle, fillcolor="#ff0000", fixedsize=true, label="", style=filled]
+		14 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		17 [shape=circle, fillcolor="#ffffff", fixedsize=true, label="", style=filled]
+		16 [shape=circle, fillcolor="#ffffff", fixedsize=true, label="", style=filled]
+		19 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		18 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		20 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		1 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		3 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		2 [shape=circle, fillcolor="#ffffff", fixedsize=true, label="", style=filled]
+		5 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		4 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		7 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		6 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		9 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+		8 [shape=circle, fillcolor="#ff7f7f", fixedsize=true, label="", style=filled]
+	}
+	6 -> 11
+	7 -> 11
+	4 -> 10
+	5 -> 10
+	10 -> 13
+	6 -> 13
+	8 -> 12
+	9 -> 12
+	9 -> 15
+	10 -> 15
+	7 -> 14
+	8 -> 14
+	13 -> 17
+	14 -> 17
+	11 -> 16
+	12 -> 16
+	12 -> 19
+	13 -> 19
+	15 -> 18
+	13 -> 18
+	14 -> 20
+	15 -> 20
+     	3 -> 7
+	4 -> 7
+	1 -> 6
+	2 -> 6
+	2 -> 9
+	3 -> 9
+	5 -> 8
+	1 -> 8
+}
