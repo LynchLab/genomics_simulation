@@ -2,7 +2,7 @@
 #c90 c89 c99 c9x c11 c1x gnu90 gnu89 gnu99 gnu9x gnu11 gnu1x c++98 c++03 gnu++98 gnu++03 c++11 c++0x gnu++11 gnu++0x c++1y gnu++1y
 #Right now I need c++11 to support constructor delegation, which I like a lot.
 
-MODE=-O3
+MODE=-Ofast
 STD=-std=c++11
 DESTDIR=/usr/local/bin
 WARNINGS=-Wall -Werror=return-type -Wno-write-strings
@@ -12,7 +12,7 @@ LDLIBS=-lgsl -lblas -L ../common/ -lmapgd -L ~/src/lz4/lib -llz4
 
 DEBUG=-g -D DEBUG
 
-CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp #$(DEBUG)
+CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) #-fopenmp #$(DEBUG) #-mpopcnt
 
 #CXXFLAGS=$(VERSION) $(STD) $(DEBUG) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
 

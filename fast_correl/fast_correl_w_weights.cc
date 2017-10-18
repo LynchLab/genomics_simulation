@@ -1,4 +1,4 @@
-#include "circular_list.h"
+		#include "circular_list.h"
 #include "interface.h"
 #include "map_file.h"
 #include "state.h"
@@ -36,7 +36,7 @@ inline size_t hash(const Triangular_index &T, const Triangular_index &t, const u
 
 inline size_t hash2(const uint16_t &d, const uint16_t &i, const uint16_t &j)
 {
-
+//	return 9;
 	return 9*d+3*i+j;
 }
 
@@ -80,16 +80,27 @@ static UINT Mask[WORD]={0x00000001, 0x00000002, 0x00000004, 0x00000008,
 			0x01000000, 0x02000000, 0x04000000, 0x08000000,
 			0x10000000, 0x20000000, 0x40000000, 0x80000000};
 
-inline int get(const UINT *place, const UINT &x, const UINT &bit)
+inline uint32_t get(const UINT *place, const UINT &x, const uint8_t &bit)
 {
-	if ((*(place+x) & Mask[bit])!=0 ){
-		return 1;
-	} else  {
-		return 0;
-	}
+	return ( (*(place+x) & Mask[bit])!=0 );
 }
 
 inline void fast_bit_sumN(const UINT *place, const UINT &N, UINT *sum)
+{
+	const UINT *end=place+N;
+	const UINT *this_place=place;
+	const UINT ylim=N >> 5;
+	for (size_t x=0; x<32; x++)
+	{
+		for (size_t y=0; y<ylim; y++)
+		{
+			sum[x]+=__builtin_popcount(*this_place);	
+			this_place++;
+		}
+	}
+}
+
+inline void transposed_bit_sumN(const UINT *place, const UINT &N, UINT *sum)
 {
 	const UINT *end=place+N;
 	const UINT *this_place=place;
@@ -126,10 +137,6 @@ inline void fast_bit_sumN(const UINT *place, const UINT &N, UINT *sum)
 		sum[29]+=( (*this_place & Mask[29])!=0 );
 		sum[30]+=( (*this_place & Mask[30])!=0 );
 		sum[31]+=( (*this_place & Mask[31])!=0 );
-		/*for (int x=0; x<WORD; ++x) 
-		{
-			std::cerr << "C " << sum[x] << std::endl;
-		}*/
 		this_place++;
 	}
 }
@@ -139,11 +146,28 @@ inline void fast_het_sumN(const UINT *place, const UINT &N, UINT *sum)
 	const UINT *end=place+2*N;
 	const UINT *this_place1=place;
 	const UINT *this_place2=place+N;
+	const UINT ylim=N >> 5;
+
+	for (int x=0; x<WORD; ++x)
+	{
+		for (size_t y=0; y<ylim; y++)
+		{
+			sum[x]+=__builtin_popcount( (*this_place1 ^ *this_place2)  );
+			this_place1++;
+			this_place2++;
+		}
+	}
+}
+
+inline void transposed_het_sumN(const UINT *place, const UINT &N, UINT *sum)
+{
+	const UINT *end=place+2*N;
+	const UINT *this_place1=place;
+	const UINT *this_place2=place+N;
 	while (this_place2!=end) {
 		for (int x=0; x<WORD; ++x)
 		{
 			sum[x]+=( (*this_place1 & Mask[x])!=(*(this_place2) & Mask[x]) );
-			//std::cerr << "H " << sum[x] << std::endl;
 		}
 		this_place1++;
 		this_place2++;
@@ -206,6 +230,7 @@ int main (int argc, char **argv){
 	//Maximum number of uint16_t to allocate
 	//4 Gb =   2000000000
 	SIZE=9000000;
+	//SIZE=90000;
 	UINT BLOCK_SIZE=2*N;
 
 	UINT *P1=new UINT [N*2*BLOCK];
@@ -215,8 +240,23 @@ int main (int argc, char **argv){
 	//Need to be private
 	Triangular_index T_MIN(N), T_MAX(N);
 	Triangular_index T(N);
-	uint16_t *D=new uint16_t [SIZE*BLOCK];
-	uint16_t *F=new uint16_t [SIZE*BLOCK/9];
+
+	uint32_t *D = new uint32_t [SIZE*BLOCK];
+	uint32_t *F = new uint32_t [SIZE*BLOCK/9];
+
+	uint32_t * Bitsum = new uint32_t [Pstates.genome_size()*WORD ];
+	uint32_t * Hetsum = new uint32_t [Pstates.genome_size()*WORD ];
+
+/*
+	uint32_t *UP1x=new uint32_t [Pstates.genome_size() ];
+	uint32_t *UP2x=new uint32_t [Pstates.genome_size() ];
+	uint32_t *UP1y=new uint32_t [Pstates.genome_size() ];
+	uint32_t *UP2y=new uint32_t [Pstates.genome_size() ];
+*/
+
+	memset(Bitsum, 0, WORD*sizeof(UINT)*Pstates.genome_size() );
+	memset(Hetsum, 0, WORD*sizeof(UINT)*Pstates.genome_size() );
+
 
 	Correl buffer_rel[BUFFER_SIZE2];        
 
@@ -225,7 +265,14 @@ int main (int argc, char **argv){
 	rel_file.write_header(buffer_rel[0]);        
 
 	size_t J=std::min(BUFFER_SIZE2, int(T.size()-T.get_k()) );
+
+	std::cerr << "Transposing...";
+//	Pstates.transpose();
+	std::cerr << "Done.\n";
+
 	Pstates.rewind();
+
+	bool not_set=true;
 
 	while (J>0)
 	{
@@ -240,7 +287,7 @@ int main (int argc, char **argv){
 		gsl_vector *w = gsl_vector_alloc (pow(N*2-1, 1) );
 		gsl_vector *c = gsl_vector_alloc (2);
 		gsl_matrix *cov = gsl_matrix_alloc (2, 2);
-
+	
 		if (indX!=-1 or indY!=-1)
 		{
 			T.set(indX, indY);
@@ -250,20 +297,22 @@ int main (int argc, char **argv){
 		{
 			State_stream state_ptr;//=
 			Pstates.set_stream(state_ptr);
-			memset(D, 0, sizeof(uint16_t)*SIZE);
-			memset(F, 0, sizeof(uint16_t)*SIZE/9);
+			memset(D, 0, sizeof(uint32_t)*SIZE);
+			memset(F, 0, sizeof(uint32_t)*SIZE/9);
 			T_MIN=T;
 			T_MAX=T+SIZE/(2*9*N);
 			if (T_MAX.get_k() > T.size() ) T_MAX.set(N-1, N);
 			//CHANGE TO LOOP
 			size_t size=Pstates.genome_size();
+			size_t this_site=0;
 			
 			//UINT (T_MAX.get_k()-T_MIN.get_k() )*32		
 	
 			//size_t inc_size=SIZE/(2*9*N)*32;
 			//size_t *inc=new size_t [inc_size]{0};
-			clock_t time1, time2;
-
+#ifdef DEBUG
+			clock_t time1, time2, time3, time4;
+#endif
 			//#pragma omp parallel for private(D)
 			for (size_t l=0;l<size;l+=BLOCK)
 			{
@@ -278,13 +327,30 @@ int main (int argc, char **argv){
 				UINT *P1_ptr=P1;
 				UINT *P2_ptr=P2;
 
-				for (size_t ll=0;ll<this_block;++ll)
-				{
-					Pstates.uncompress(P1_ptr, P2_ptr, state_ptr);
-					P1_ptr+=P_step;
-					P2_ptr+=P_step;
+				//There is probably a way to cut down on the number of decompressions needed.
+//				if (not_set || )
+//				{
+					for (size_t ll=0;ll<this_block;++ll)
+					{
+						Pstates.uncompress(P1_ptr, P2_ptr, state_ptr);
+						P1_ptr+=P_step;
+						P2_ptr+=P_step;
+					}
 				}
-				}
+/*				} else {
+					for (size_t ll=0;ll<this_block;++ll)
+					{
+						P1_ptr[x]=UP1x[this_site+ll];
+						P2_ptr[x]=UP2x[this_site+ll];
+						P1_ptr[y]=UP1x[this_site+ll];
+						P2_ptr[y]=UP2x[this_site+ll];
+						P1_ptr+=P_step;
+						P2_ptr+=P_step;
+					}
+				} */
+#ifdef DEBUG
+				time2=clock();
+#endif
 
 				UINT d1[WORD*BLOCK];
 				memset(d1, 0, WORD*BLOCK*sizeof(UINT) );
@@ -298,23 +364,45 @@ int main (int argc, char **argv){
 				UINT *P1_ptr=P1;
 				UINT *d1_ptr=d1;
 				UINT *h1_ptr=h1;
-				for (size_t ll=0;ll<this_block;++ll)
-				{
-					fast_bit_sumN(P1_ptr, 2*N, d1_ptr);
-					fast_het_sumN(P1_ptr, N, h1_ptr);
-					d1_ptr+=d_step;
-					h1_ptr+=h_step;
-					P1_ptr+=P_step;
+
+				// it is possible this could be done only once and offloaded to a table...
+				if (not_set){
+					for (size_t ll=0;ll<this_block;++ll)
+					{
+						transposed_bit_sumN(P1_ptr, 2*N, d1_ptr);
+						transposed_het_sumN(P1_ptr, N, h1_ptr);
+						d1_ptr+=d_step;
+						h1_ptr+=h_step;
+						P1_ptr+=P_step;
+					}
+					//std::cerr << 
+//					memcpy(Bitsum+this_site*WORD, d1, WORD*BLOCK*sizeof(UINT) );
+//					memcpy(Hetsum+this_site*WORD, h1, WORD*BLOCK*sizeof(UINT) );
+
+					memcpy(Bitsum+this_site*WORD, d1, WORD*BLOCK*sizeof(UINT) );
+					memcpy(Hetsum+this_site*WORD, h1, WORD*BLOCK*sizeof(UINT) );
+
+				} else {
+					memcpy(d1, Bitsum+this_site*WORD, WORD*BLOCK*sizeof(UINT) );
+					memcpy(h1, Hetsum+this_site*WORD, WORD*BLOCK*sizeof(UINT) );
 				}
+				this_site+=BLOCK;
+				if(this_site>=size) not_set=false;
+
 				}
-				
+
+#ifdef DEBUG
+				time3=clock();
+				size_t go_sum=0;	
+#endif
+			
 				#pragma omp parallel for 
 				for (Triangular_index t=T_MIN; t<T_MAX; ++t)
 				{ 
 					size_t x, y;
 					t.get_xy(x,y);
-					uint16_t *D_ptr=D+(t.get_k()-T_MIN.get_k())*(STEP);
-					uint16_t *F_ptr=F+(t.get_k()-T_MIN.get_k())*(STEP_F);
+					uint32_t *D_ptr=D+(t.get_k()-T_MIN.get_k())*(STEP);
+					uint32_t *F_ptr=F+(t.get_k()-T_MIN.get_k())*(STEP_F);
 
 					UINT *h1_ptr=h1;
 					UINT *d1_ptr=d1;
@@ -323,10 +411,18 @@ int main (int argc, char **argv){
 
 					for (size_t ll=0;ll<this_block;++ll)
 					{
-						for (size_t k=0; k<WORD; ++k)
+						for (uint8_t k=0; k<WORD; ++k)
 						{
+							/*uint8_t g1=get(P1_ptr, x, k)+get(P2_ptr, x, k);
+							uint8_t g2=get(P1_ptr, y, k)+get(P2_ptr, y, k);
+							size_t go=0;//hash2(0, 0, 0);
+							//go=(go >> 7);
+							go_sum+=go+g1+g2;
+							++(D_ptr[0]);
+							//++(D_ptr[1]);*/
 							D_ptr[hash2(d1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k))]++;
 							F_ptr[hash_F2(d1_ptr[k])]+=h1_ptr[k];
+							//std::cerr << k << " : " << h1_ptr[k] << std::endl;
 							//D[hash(t, T_MIN, d1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k))]++;
 						}
 						h1_ptr+=h_step;
@@ -335,19 +431,22 @@ int main (int argc, char **argv){
 						P2_ptr+=P_step;
 					}
 				}
+			
 #ifdef DEBUG
-				time2=clock();
-				std::cerr << l << " : of " << size << " : " << (SIZE*BLOCK)/double(time2-time1) << std::endl;
+				std::cerr << go_sum << " " << this_block*WORD << std::endl;
+				time4=clock();
+				std::cerr << l << " : of " << size << " : " << (SIZE*BLOCK)/double(time4-time1) << " compression " << double (time2-time1)/double(time4-time1) << " bitcounts: " << double (time3-time2)/double(time4-time1) << "%, SUMS:"<< double(time4-time3)/double(time4-time1) << std::endl;
 #endif
 			}
 			//delete [] inc;
 		}
 
-		double k_w, k, f_p, f_w, f_X=0, f_X_w=0, f_Y=0, f_Y_w=0, Theta=0, Theta_w=0, gamma_XY=0, gamma_XY_w=0, gamma_YX=0, gamma_YX_w=0, Z=0, Z_w=0;
-		double mu, k1, k2;
+		double k_w, k=0, f_p=0, f_w=0, f_Y=0, f_X=0, Theta=0, Theta_w=0, gamma_XY=0, gamma_XY_w=0, gamma_YX=0, gamma_YX_w=0, Z=0, Z_w=0;
+		double mu=0, k1=0, k2=0, D1=0, D1_w=0, D2=0, D2_w=0;
 
 		double chisq;
 
+/*
 		Theta_w=0;
 		k=0;
 		f_p=0;
@@ -362,12 +461,13 @@ int main (int argc, char **argv){
 		gamma_XY_w=0;
 		gamma_YX=0;
 		gamma_YX_w=0;
+*/
 		size_t c2_min = 0;
 
 		for (size_t c2=(1+c2_min); c2<((N-1)*2-c2_min); c2++)
 		{
 				//x,y
-				double WD, CD, d2=double(c2)/double(N*2-4);
+				double WD, CD, d2=double(c2)/double(N*2.-4.);
 
 				double mmmm=double(D[hash(T, T_MIN, c2, 0, 0)]);
 				double Mmmm=double(D[hash(T, T_MIN, c2, 1, 0)]);
@@ -381,17 +481,19 @@ int main (int argc, char **argv){
 
 				double Den=mmmm+Mmmm+MMmm+mmMm+MmMm+MMMm+mmMM+MmMM+MMMM;
 
+//				if (d2>0.4 && d2<0.6)
+//					std::cerr << F[hash_F(T, T_MIN, c2)] << ", " << N << ", " << Den << ", " << d2 << std::endl;
+//
 				double f=1.-double(F[hash_F(T, T_MIN, c2)]/double(Den*N) )/(2.*d2*(1.-d2) );
 
 
 				double OX=((Mmmm+MmMm+MmMM)/2.+MMmm+MMMm+MMMM+1)/Den;
 				double OY=((mmMm+MmMm+MMMm)/2.+mmMM+MmMM+MMMM+1)/Den;
 
-				//OX=d2;
-				//OY=d2;
+				OX=d2;
+				OY=d2;
 
 				double M=d2;
-
 
 				//std::cerr << d2 << ", " << F[hash_F(T, T_MIN, c2)]/double(Den*N) << ", " << f << std::endl;
 
@@ -399,48 +501,56 @@ int main (int argc, char **argv){
 
 				if (OX > 0 && OY > 0 && OX < 1 && OY <1 && M!=0.5 && Den > 0)
 				{
-					Theta+=(1.+f)*(1+f)*d2*(1.-d2)*(mmmm*(0-OX)*(0-OY)+Mmmm*(1.0-OX)*(0-OY)/2.+MMmm*(1.-OX)*(0-OY)
+					//assume a=-d
+					double WT=pow(d2,3)-pow(d2,4);
+					Theta+=WT*(mmmm*(0-OX)*(0-OY)+Mmmm*(1.0-OX)*(0-OY)/2.+MMmm*(1.-OX)*(0-OY)
 								  +Mmmm*(0.0-OX)*(0-OY)/2.
 						   +mmMm*(0-OX)*(1.0-OY)/2.+MmMm*(0.0-OX)*(0.0-OY)/4.+MMMm*(1.-OX)*(0.0-OY)/2.
 						   +mmMm*(0-OX)*(0.0-OY)/2.+MmMm*(0.0-OX)*(1.0-OY)/4.+MMMm*(1.-OX)*(1.0-OY)/2.
 						   			   +MmMm*(1.0-OX)*(0.0-OY)/4.
 						   			   +MmMm*(1.0-OX)*(1.0-OY)/4.
 						   +mmMM*(0-OX)*(1.-OY)+MmMM*(0.0-OX)*(1.-OY)/2.+MMMM*(1.-OX)*(1.-OY) 
-						   		       +MmMM*(1.0-OX)*(1.-OY)/2. )/sqrt(OX*(1-OX)*(1-OY)*OY )/2.;
-					Theta_w+=Den*(1.+f)*d2*(1.-d2);
+						   		       +MmMM*(1.0-OX)*(1.-OY)/2. )/sqrt(OX*(1-OX)*(1-OY)*OY )/2./(1.+f);
+					Theta_w+=WT*Den;
 
-					CD=1;//pow(OX*(1-OX), 1);
-					WD=4*d2*(1.-d2)*(d2*(1.-d2)+f*(4*pow(d2,2)-4*d2+1)-pow(f,2)*d2*(1.-d2) );
-					k+=CD*WD*( (1./(1.-d2)+1./d2-3) )*Den;
-					f_p+=f*CD*WD*Den;
-					f_w+=Den*WD;
-					k_w+=Den*WD;
+					double W=pow(d2, 2)-2*pow(d2,3)+pow(d2,4);
+					k=1./d2+1./(1.-d2)-3.;
 
-					f_X+=CD*WD*(mmmm*(0-OX)*(0-OX)+Mmmm*(0.-OX)*(1.-OX)+MMmm*(1.-OX)*(1.-OX)
+					D1+=1./(1.-pow(f,2)+f*(k-1.))*Den*W;
+					D2+=1.*k/(1.-pow(f,2)+f*(k-1.))*Den*W;
+
+					D1_w+=Den*W;
+					D2_w+=Den*W;
+
+					f_X=(mmmm*(0-OX)*(0-OX)+Mmmm*(0.-OX)*(1.-OX)+MMmm*(1.-OX)*(1.-OX)
 						   +mmMm*(0-OX)*(0-OX)+MmMm*(0.-OX)*(1.-OX)+MMMm*(1.-OX)*(1.-OX)
-						   +mmMM*(0-OX)*(0-OX)+MmMM*(0.-OX)*(1.-OX)+MMMM*(1.-OX)*(1.-OX) )/(OX*(1-OX) );
-					f_X_w+=Den*WD;
+						   +mmMM*(0-OX)*(0-OX)+MmMM*(0.-OX)*(1.-OX)+MMMM*(1.-OX)*(1.-OX) )/(OX*(1-OX) )/Den;
 					
 
-					f_Y+=CD*WD*(mmmm*(0-OY)*(0-OY)+Mmmm*(0-OY)*(0-OY)+MMmm*(0-OY)*(0-OY)
+					f_Y=(mmmm*(0-OY)*(0-OY)+Mmmm*(0-OY)*(0-OY)+MMmm*(0-OY)*(0-OY)
 						   +mmMm*(0.-OY)*(1.-OY)+MmMm*(0.-OY)*(1.-OY)+MMMm*(0.-OY)*(1.-OY)
-						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) );
-					f_Y_w+=Den*WD;
+						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) )/Den;
+					//std::cerr << f*(-f_X-f_Y) << ", " << W*Den << std::endl;
+					f_p+=f*(f-f_X-f_Y)*W*Den;
+					f_w+=W*Den;
+					
+					double q=1-d2;
+					//2*p1**4 - 3*p1**3 + p1**2 
+					double GW=2*pow(d2, 4)-3*pow(d2, 3)+pow(d2, 2);
 
-
-					gamma_XY+=(pow(d2,3)*(1-d2)-pow(1.-d2,3)*d2 )*(mmmm*(0-OX)*(0-OX)*(0-OY)+Mmmm*(0.-OX)*(1.-OX)*(0-OY)+MMmm*(1.-OX)*(1.-OX)*(0-OY)
+					gamma_XY+=GW*(mmmm*(0-OX)*(0-OX)*(0-OY)+Mmmm*(0.-OX)*(1.-OX)*(0-OY)+MMmm*(1.-OX)*(1.-OX)*(0-OY)
 							+(mmMm*(0-OX)*(0-OX)*(1.-OY)+MmMm*(1.-OX)*(0.-OX)*(1.-OY)+MMMm*(1.-OX)*(1.-OX)*(1.-OY) )/2.
 							+(mmMm*(0-OX)*(0-OX)*(0.-OY)+MmMm*(1.-OX)*(0.-OX)*(0.-OY)+MMMm*(1.-OX)*(1.-OX)*(0.-OY) )/2.
 							+mmMM*(0-OX)*(0-OX)*(1.-OY)+MmMM*(1.-OX)*(0.-OX)*(1.-OY)+MMMM*(1.-OX)*(1.-OX)*(1.-OY) )/(M*(1-M)*(1-2*M)); 
-					gamma_XY_w+=Den*(pow(d2,3)*(1-d2)-pow(1.-d2,3)*d2 )*f;
+					gamma_XY_w+=f*GW*Den;
 
-					gamma_YX+=(pow(d2,3)*(1-d2)-pow(1.-d2,3)*d2 )*(mmmm*(0-OY)*(0-OY)*(0-OX)+Mmmm*(0.-OY)*(0.-OY)*(0.0-OX)/2.+MMmm*(0.-OY)*(0.-OY)*(1.-OX)
+					gamma_YX+=GW*(mmmm*(0-OY)*(0-OY)*(0-OX)+Mmmm*(0.-OY)*(0.-OY)*(0.0-OX)/2.+MMmm*(0.-OY)*(0.-OY)*(1.-OX)
 									    +Mmmm*(0.-OY)*(0.-OY)*(1.0-OX)/2.
 							+mmMm*(1.-OY)*(0.-OY)*(0.-OX)+MmMm*(1.-OY)*(0.-OY)*(0.0-OX)/2.+MMMm*(1.-OY)*(0.-OY)*(1.-OX)
 									   	     +MmMm*(1.-OY)*(0.-OY)*(1.0-OX)/2.
 							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(0.0-OX)/2.+MMMM*(1.-OY)*(1.-OY)*(1.-OX) 
 									    	     +MmMM*(1.-OY)*(1.-OY)*(1.0-OX)/2.)/(M*(1-M)*(1-2*M) );
-					gamma_YX_w+=Den*(pow(d2,3)*(1-d2)-pow(1.-d2,3)*d2 )*f;
+					gamma_YX_w+=f*Den*GW;
 
 					mu=(mmmm*(0-OY)*(0-OY)*(0-OX)*(0-OX)+Mmmm*(0.-OY)*(0.-OY)*(1.-OX)*(0.0-OX)+MMmm*(0.-OY)*(0.-OY)*(1.-OX)*(1.-OX)
 							+mmMm*(1.-OY)*(0.-OY)*(0.-OX)*(0.-OX)+MmMm*(0.-OY)*(1.-OY)*(0.-OX)*(1.-OX)+MMMm*(0.-OY)*(1.-OY)*(1.-OX)*(1.-OX)
@@ -457,21 +567,19 @@ int main (int argc, char **argv){
 					gsl_matrix_set (X, c2, 1, k2);
       
 					gsl_vector_set (Y, c2, mu);
-					gsl_vector_set (w, c2, Den);
-				}
+					gsl_vector_set (w, c2, Den*W);
+				} /*
 				if (indX!=-1 or indY!=-1){
 
 					Theta_w=0;
 				        Theta=0;
 				        f_X=0;
-				        f_X_w=0;
 				        f_Y=0;
-				        f_Y_w=0;
 				        gamma_XY=0;
 				        gamma_XY_w=0;
 				        gamma_YX=0;
 			        	gamma_YX_w=0;
-				}
+				} */
 		}
 		gsl_multifit_wlinear (X, w, Y, c, cov, &chisq, work);
 			
@@ -479,15 +587,40 @@ int main (int argc, char **argv){
 		if(indX!=-1 or indY!=-1) return 0;
 
 		buffer_rel[z].b_=2*Theta/Theta_w;
-		k=k/k_w;
+		//std::cerr << k << ", " << k_w << std::endl;
 		f_p=f_p/f_w;
-		//std::cerr << (f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) << beta(1) << beta(0) << ", " << k << std::endl;
-		buffer_rel[z].d_=(f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w)+k*beta(1)+beta(0) )/(1.-f_p-f_p*f_p+f_p*k);
+		D2=D2/D2_w;
+		D1=D1/D1_w;
+	
+		//std::cerr << f_p*D1 << ", " << D1 << ", " << D2 << std::endl;
+	
+	//	std::cerr << "1: " << f_X/f_X_w << std::endl;
+	//	std::cerr << "2: " << f_Y/f_Y_w << std::endl;
+	//	std::cerr << "3: " << k << std::endl;
+	//	std::cerr << "4: " << f_p << std::endl;
+	//	std::cerr << "5: " << (1.-f_p-f_p*f_p+f_p*k) << std::endl;
+//		std::cerr << k*beta(1) << ", " << beta(0) << ", " << f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) << std::endl;
+//		k=3.5;
+		buffer_rel[z].d_=D2*beta(1)+D1*beta(0)+D1*f_p;//+f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) )/(1.+f_p*(k-1)-f_p*f_p)*4;
 		buffer_rel[z].bd_=(gamma_XY+gamma_YX)/(gamma_XY_w+gamma_YX_w);
+		buffer_rel[z].fx_=0;
+		buffer_rel[z].fy_=0;
+		buffer_rel[z].f_=f_p;
+		buffer_rel[z].k_=0;
+		buffer_rel[z].d1_=beta(0);
+		buffer_rel[z].d2_=beta(1);
 		size_t x, y;
 		T.get_xy(x,y);
 		buffer_rel[z].set_X_name(x);
 		buffer_rel[z].set_Y_name(y);
+
+/*
+		if (x==y) {
+			buffer_rel[z].b_=4*Theta/Theta_w;
+			buffer_rel[z].bd_=(gamma_XY+gamma_YX)/(gamma_XY_w)/2;
+			buffer_rel[z].d_=(k*beta(1)+beta(0)+f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) )/(1.-f_p-f_p*f_p+f_p*k);
+		}
+*/
 
 		if (T.get_k()!=T.size() ) ++T;
 
@@ -501,12 +634,19 @@ int main (int argc, char **argv){
 		
 		gsl_multifit_linear_free(work);
 	}
-	for (size_t z=0; z<J; ++z)
-		rel_file.write(buffer_rel[z]);
+		for (size_t z=0; z<J; ++z)
+			rel_file.write(buffer_rel[z]);
 		J=std::min(BUFFER_SIZE2, int(T.size()-T.get_k()) );
 	}
+
 	delete [] P1;
 	delete [] D;
+	delete [] F;
+ 
+	delete [] Bitsum;
+	delete [] Hetsum;
+
+
 	rel_file.close();
 	//close();
 }

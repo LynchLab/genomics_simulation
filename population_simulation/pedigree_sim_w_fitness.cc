@@ -15,7 +15,7 @@
 #include "map_file.h"
 
 //#define REC		//Define if you want linkage between sites, leave undefined for free recombination. 
-#define MUT		//Define if you want to introduce mutation each generation.
+//#define MUT		//Define if you want to introduce mutation each generation.
 
 #define LOCI	32	//Number of loci in a byte. Leave it at 32 unless you are me.
 #define BINS	20
@@ -47,7 +47,7 @@ private:
 	static uint32_t ID;
 public:
 	uint32_t P1, P2;
-	double z;
+	double w, z;
 	uint32_t e;
 
 	Individual() {
@@ -101,7 +101,8 @@ void disc_mating(Individual *p, Individual *c, const size_t &size, const Healpix
 	//A five hundred mile dispersal disc
 	//double rad=0.050478006;
 
-	double rad=std::max(atan(2*sqrt(8.0/size) ), 0.050478006);
+	//double rad=std::max(atan(2*sqrt(8.0/size) ), 0.050478006);
+	double rad=std::max(atan(2*sqrt(8.0/size) ), 2*0.050478006);
 	double *zbreak=new double [ int(pow(tan(rad)/2, 2)*size*2) ];
 	std::cerr << "size :" << int(pow(tan(rad)/2, 2)*size*2) << std::endl;  
 	for (size_t x=0; x<size; ++x)
@@ -110,10 +111,10 @@ void disc_mating(Individual *p, Individual *c, const size_t &size, const Healpix
 		disc_size=disc.size();
 		disc_size=disc.size();
 		//TODO These calls are a little expensive, cut them?
-		zbreak[0]=exp(p[map[disc[0]]].z);
+		zbreak[0]=exp(p[map[disc[0]]].w);
 		for (size_t y=1; y<size_t (disc_size); ++y) {
 			//TODO These calls are a little expensive, cut them?
-			zbreak[y]=zbreak[y-1]+exp(p[map[disc[y]]].z);
+			zbreak[y]=zbreak[y-1]+exp(p[map[disc[y]]].w);
 		}	
                 c[x].P1=map[disc[zfunc(zbreak, disc_size, mt)]];
                 c[x].P2=map[disc[zfunc(zbreak, disc_size, mt)]];
@@ -125,9 +126,9 @@ void
 rand_mating(Individual *p, Individual *c, const size_t &size, std::mt19937 &mt)
 {
 	double *zbreak=new double [size];
-	zbreak[0]=exp(p[0].z);
+	zbreak[0]=exp(p[0].w);
 	for (size_t y=1; y<size; ++y) {
-		zbreak[y]=zbreak[y-1]+exp(p[y].z);
+		zbreak[y]=zbreak[y-1]+exp(p[y].w);
 	}	
 
         for (size_t x=0; x<size; ++x)
@@ -363,7 +364,7 @@ public:
 			x2z[x]=z;
 
 			W1[x]=new double[3];
-			W1[x][0]=-a_norm(mt);
+			W1[x][0]=-0.001;//-a_norm(mt);
 			switch (mode)
 			{
 				case 0:
@@ -408,7 +409,7 @@ public:
 };
 
 
-void inc(Individual *ind, Trait &trait, uint32_t *P[], const size_t &N, const size_t &k) 
+void inc(Individual *ind, Trait &trait, uint32_t *P[], const size_t &N, const size_t &k, bool noselect) 
 {
 	const uint32_t *P1=P[0];
 	const uint32_t *P2=P[1];
@@ -429,19 +430,25 @@ void inc(Individual *ind, Trait &trait, uint32_t *P[], const size_t &N, const si
 			uint32_t mask=MASK[Z];
 			if ( (mask & Z2) != 0)
 			{
-				double W1[3], W2[3];
+				double W1[3];//, W2[3];
 				std::memcpy(W1, trait.W1[x], sizeof(double)*3);
-				std::memcpy(W2, trait.W2[x], sizeof(double)*3);
+				//std::memcpy(W2, trait.W2[x], sizeof(double)*3);
 			
 				for (size_t i=0; i<N; i++)
 				{
 					//if (ind[i].e >= NUM_ENV_H) 
 					ind[i].z+=W1[((P1[i] & mask)!=0)+((P2[i] & mask)!=0)];
-					//else ind[i].z+=W2[((P1[i] & mask)!=0)+((P2[i] & mask)!=0)];
 				}
 				x++;
 			}
 		}	
+	}
+	if (!noselect)
+	{
+		for (size_t i=0; i<N; i++)
+		{
+			ind[i].w=ind[i].z;
+		}
 	}
 }
 
@@ -497,11 +504,11 @@ count_e(const Individual *ind, const size_t &N, const size_t &e)
 	for (size_t y=0; y<N; ++y) sum+=ind[y].e==e;
 	return sum;
 }
-double get_freq(uint32_t **Results, 
+long double get_freq(uint32_t **Results, 
 	const size_t &generation_size,
 	const uint32_t &Z)
 {
-	double p=0;
+	long double p=0;
 	const uint32_t MASK[LOCI]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
 					0x00000010,	0x00000020,	0x00000040,	0x00000080,
 					0x00000100,	0x00000200,	0x00000400, 	0x00000800,	
@@ -516,7 +523,7 @@ double get_freq(uint32_t **Results,
 		p+=( ( (Results[0][y] & MASK[Z])!=0)+( (Results[1][y] & MASK[Z])!=0) );
 	}
 	//std::cerr << std::endl;
-	return p/double(generation_size*2.);
+	return p/(long double)(generation_size*2.);
 }
 
 double get_freq_if(uint32_t **Results, 
@@ -758,27 +765,41 @@ print_cov(const Trait &traits, State &sites, uint32_t *mask2, std::ostream &out)
 		uint32_t k=traits.x2k[y];
 		out << k*32+z;
 		/* TODO Fix.*/
-		//std::cerr << k << ", " << z << std::endl;
+		long double beta_sum=0, delta_sum=0;
 		sites.uncompress(P1, P2, k);
+		//std::cerr << k << "::" << z << "-" << P1[0] << std::endl;
 		const uint32_t mask=MASK[z];
 
-		const double a=traits.W1[y][2];
-		const double d=traits.W1[y][1];
-		const double p=get_freq(P, sites.sample_size(), z);  
-		const double q=1.-p;
-		const double D=2*p*q-get_h(P, sites.sample_size(), z);  
-		const double alpha=a+d*(q-p);
-		double beta[3]={-p*2*alpha,(q-p)*alpha,2*q*alpha};
-		double delta[3]={d*(-2*p*p+D),d*(2*p*q+D),d*(-2*q*q+D)};
+		const long double a=traits.W1[y][0];
+		const long double d=traits.W1[y][1];
+		const long double p=get_freq(P, sites.sample_size(), z);  
+		const long double q=1.-p;
+		const long double D=2.*p*q-get_h(P, sites.sample_size(), z);  
+		const long double alpha=a+d*(q-p);
+
+		long double beta[3]={-p*2.*alpha,(q-p)*alpha,2.*q*alpha};
+		long double delta[3]={d*(-2.*p*p+D),d*(2.*p*q+D),d*(-2.*q*q+D)};
+	
+
+//		long double beta[3]={-a,0,a};
+//		long double delta[3]={0,d,0};
 
 		for (size_t i=0; i<sites.sample_size(); ++i){
 			if ( mask2[i >> 5] & (1 << (i & 0x1F) ) ) 
+				{
 				out << '\t' << beta[((P1[i] & mask)!=0)+((P2[i] & mask)!=0)];
+				//std::cerr << int ( ((P1[i] & mask)!=0)+((P2[i] & mask)!=0) ) << '\t';
+				beta_sum+=beta[((P1[i] & mask)!=0)+((P2[i] & mask)!=0)];
+				}
 		}
 		for (size_t i=0; i<sites.sample_size(); ++i){
 			if ( mask2[i >> 5] & (1 << (i & 0x1F) ) ) 
+				{
 				out << '\t' << delta[((P1[i] & mask)!=0)+((P2[i] & mask)!=0)];
+				delta_sum+=delta[((P1[i] & mask)!=0)+((P2[i] & mask)!=0)];
+				}
 		}
+		//std::cerr << beta_sum <<", " << delta_sum << std::endl;
 		out << "\n";
 	}
 	sites.rewind();
@@ -1210,11 +1231,24 @@ main(int argc, char *argv[] )
 		open_ped(pedigree);
 	}
 
+	for (size_t x=0; x<N; x++)
+	{
+		parents[x].z=0;
+		parents[x].w=0;
+	}
 
 	for (size_t y=0; y<t; ++y){
 //		#pragma omp parallel for
+
 		std::cerr << __LINE__ << " y:" << y << std::endl; 
 		iter(parents, children, N, type, map, mt);
+
+		for (size_t x=0; x<N; x++)
+		{
+			children[x].z=0;
+			children[x].w=0;
+		}
+
 #ifdef REC
 		initR(Rstate, N, mt);
 #endif
@@ -1252,7 +1286,7 @@ main(int argc, char *argv[] )
 			mutate(Ostate[0], r32, rN, poisson, mt);
 			mutate(Ostate[1], r32, rN, poisson, mt);
 #endif
-			if (!noselect) inc(children, trait, Ostate, N, K);
+			inc(children, trait, Ostate, N, K, noselect);
 
 #ifdef REC
 			recombine2((Rstate[0]), (Rstate[0]+N), r32, gcounter, mt);
@@ -1269,10 +1303,6 @@ main(int argc, char *argv[] )
 		Pstates.swap(Ostates);
 		std::swap(children, parents);
 	
-		for (size_t x=0; x<N; x++)
-		{
-			children[x].z=0;
-		}
 
 		if(p_pedigree){
 			push_ped(parents, N, y, pedigree);
@@ -1317,6 +1347,12 @@ main(int argc, char *argv[] )
 		names.close();
 	}
 
+	if(p_traits){
+		std::fstream trait_file;
+		trait_file.open("t_final.txt", std::fstream::out);
+		print_trait(N, mask, t, parents, trait_file);
+		trait_file.close();
+	}
 
 	if(p_geography)
 	{

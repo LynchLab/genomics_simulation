@@ -56,6 +56,7 @@ public:
 		memcpy(lz4_start_, rhs.lz4_start_, rhs.lz4_end_-rhs.lz4_start_);
 
 		cached_=rhs.cached_;
+		transposed_=rhs.transposed_;
 		block_size_=rhs.block_size_;
 		size_=rhs.size_;
 		sites_=rhs.sites_;
@@ -76,6 +77,7 @@ public:
 			block_size_=rhs.block_size_;
 			size_=rhs.size_;
 			sites_=rhs.sites_;
+			transposed_=rhs.transposed_;
 			cached_sites_=rhs.cached_sites_;
 			rhs.lz4_start_ = nullptr;
 		}
@@ -97,6 +99,7 @@ public:
 			memcpy(lz4_start_, rhs.lz4_start_, rhs.lz4_end_-rhs.lz4_start_);
 
 			cached_=rhs.cached_;
+			transposed_=rhs.transposed_;
 			block_size_=rhs.block_size_;
 			size_=rhs.size_;
 			sites_=rhs.sites_;

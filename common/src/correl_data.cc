@@ -48,7 +48,16 @@ Correl::read (std::istream& in)
 	stream_line >> Y_ ;
 	stream_line >> b_ ;
 	stream_line >> d_ ;
-	stream_line >> bd_ ;
+	stream_line >> bd_;
+
+	stream_line >> fx_;
+	stream_line >> fy_;
+
+	stream_line >> d1_;
+	stream_line >> d2_;
+
+	stream_line >> f_ ;
+	stream_line >> k_ ;
 }
 
 void
@@ -58,7 +67,15 @@ Correl::write (std::ostream& out) const
 	out << Y_ << delim;
 	out << b_ << delim;
 	out << d_ << delim;
-	out << bd_;
+	out << bd_<< delim;
+
+	out << fx_<< delim;
+	out << fy_<< delim;
+
+	out << d1_<< delim;
+	out << d2_<< delim;
+	out << f_ << delim;
+	out << k_;
 }
 
 std::string 
