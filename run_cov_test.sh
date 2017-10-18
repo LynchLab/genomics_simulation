@@ -3,7 +3,7 @@ source settings.sh
 
 cd analysis_files/
 #pedigree_sim -N 1200 -s 40000 -g 9001 -bnGmdt -k 1000 -v 1000 -e 0.008 > ../sequences/states.bin
-pedigree_sim -y r -N 300 -s 2000 -g 501 -lbnGmdt -k 100 -v 500 -e 0.008 -Q 0 -S 0.003 > ../sequences/states.bin
+pedigree_sim -N 300 -s 2000 -g 501 -lbnGmdt -k 100 -v 500 -e 0.008 -Q 0 -S 0.003 > ../sequences/states.bin
 #pedigree_sim -N 9408 -s 40000 -g 9001 -bnGmdt -k 1000 -v 1000 -e 0.008 > ../sequences/states.bin
 cd ../analysis_pipelines/
 cat ../sequences/states.bin | call_relatedness ../analysis_files/name-file.txt > ../analysis_files/mapgd_relatedness.out
