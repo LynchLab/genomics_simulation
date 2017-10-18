@@ -365,7 +365,6 @@ int main (int argc, char **argv){
 				UINT *d1_ptr=d1;
 				UINT *h1_ptr=h1;
 
-				// it is possible this could be done only once and offloaded to a table...
 				if (not_set){
 					for (size_t ll=0;ll<this_block;++ll)
 					{
@@ -378,9 +377,11 @@ int main (int argc, char **argv){
 					//std::cerr << 
 //					memcpy(Bitsum+this_site*WORD, d1, WORD*BLOCK*sizeof(UINT) );
 //					memcpy(Hetsum+this_site*WORD, h1, WORD*BLOCK*sizeof(UINT) );
-
-					memcpy(Bitsum+this_site*WORD, d1, WORD*BLOCK*sizeof(UINT) );
-					memcpy(Hetsum+this_site*WORD, h1, WORD*BLOCK*sizeof(UINT) );
+					if(this_site*WORD+WORD*BLOCK*sizeof(UINT)<WORD*sizeof(UINT)*Pstates.genome_size() )
+					{
+						memcpy(Bitsum+this_site*WORD, d1, WORD*BLOCK*sizeof(UINT) );
+						memcpy(Hetsum+this_site*WORD, h1, WORD*BLOCK*sizeof(UINT) );
+					}
 
 				} else {
 					memcpy(d1, Bitsum+this_site*WORD, WORD*BLOCK*sizeof(UINT) );
