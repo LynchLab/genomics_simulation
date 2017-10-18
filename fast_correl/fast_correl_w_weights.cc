@@ -532,7 +532,7 @@ int main (int argc, char **argv){
 						   +mmMm*(0.-OY)*(1.-OY)+MmMm*(0.-OY)*(1.-OY)+MMMm*(0.-OY)*(1.-OY)
 						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) )/Den;
 					//std::cerr << f*(-f_X-f_Y) << ", " << W*Den << std::endl;
-					f_p+=f*(f-f_X-f_Y)*W*Den;
+					f_p+=f*(-f_X-f_Y)*W*Den;
 					f_w+=W*Den;
 					
 					double q=1-d2;
