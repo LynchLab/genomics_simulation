@@ -68,12 +68,12 @@ for(x in 1:n) {
 }
 
 Vdelta<-VD[1:n,1:n]
-VA<-VA[1:n, 1:n]
+VA<-VA[1:n, 1:n]*2
 VG<-VG[1:n, 1:n]
 gctaA<-gctaA[1:n, 1:n]
 gctaD<-gctaD[1:n, 1:n]
 gctaA<-gctaA
-plinkA<-plinkA[1:n, 1:n]
+plinkA<-plinkA[1:n, 1:n]*2
 
 true_a<-true_a/var(as.vector(a) )
 true_d<-true_d/var(as.vector(d) )
