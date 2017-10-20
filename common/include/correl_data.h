@@ -33,7 +33,7 @@ public:
 
 	id1_t sites;	//!< the number of sites analyzed.
 
-	float_t b_, d_, bd_, f_, k_, d1_, d2_, fx_, fy_;
+	float_t b_, d_, bd_;// f_, k_, d1_, d2_, fx_, fy_;
 	/*
 	 * See ?
 	 */

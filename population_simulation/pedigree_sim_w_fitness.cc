@@ -37,7 +37,7 @@ void make_map_data (arr <int> &data, const int &N) {
 			return;
 		} 
 	}
-	std::cerr << "Invalid number of Individuals for geometric structure. Try 12*i^2 for any i." << std::endl;
+	std::cerr << N << "is an invalid number of Individuals for geometric structure. Try 12*i^2 for any i." << std::endl;
 	exit(0);
 }
 
@@ -137,6 +137,47 @@ rand_mating(Individual *p, Individual *c, const size_t &size, std::mt19937 &mt)
                 c[x].P2=zfunc(zbreak, size, mt);
         }
 	delete [] zbreak;
+}
+
+
+void
+rand_2pop(Individual *p, Individual *c, const size_t &size1, const size_t &size2, std::mt19937 &mt)
+{
+
+//	std::cerr << "2pop\n";
+
+	double *zbreak1=new double [size1];
+	double *zbreak2=new double [size2];
+
+	zbreak1[0]=exp(p[0].w);
+	zbreak2[0]=exp(p[size1].w);
+
+	for (size_t y=1; y<size1; ++y) 
+	{
+		zbreak1[y]=zbreak1[y-1]+exp(p[y].w);
+	}
+
+	for (size_t y=size1+1; y<size1+size2; ++y) 
+	{
+		zbreak2[y-size1]=zbreak2[y-1-size1]+exp(p[y].w);
+	}	
+
+        for (size_t x=0; x<size1; ++x)
+        {
+                c[x].P1=zfunc(zbreak1, size1, mt);
+                c[x].P2=zfunc(zbreak1, size1, mt);
+//		std::cerr << "(1) "<< x << " " << c[x].P1 <<  ", " << c[x].P2 << " \n";
+        }
+
+        for (size_t x=size1; x<size1+size2; ++x)
+	{
+                c[x].P1=zfunc(zbreak2, size2, mt)+size1;
+                c[x].P2=zfunc(zbreak2, size2, mt)+size1;
+//		std::cerr << "(2) " << x << " " << c[x].P1 << ", " << c[x].P2 << " \n";
+        }
+
+	delete [] zbreak1;
+	delete [] zbreak2;
 }
 
 void print_head(std::ostream &out, const int &length)
@@ -582,12 +623,25 @@ double get_freq_if_2(uint32_t **Results,
 void 
 iter (Individual *parents, Individual *children,
 	const size_t &generation_size, const char &type,
-	const Healpix_Map <int> & map, std::mt19937 &mt)
+	const Healpix_Map <int> & map, std::mt19937 &mt, const uint32_t &t, const uint32_t &T)
 {
+	std::cerr << "Type: " << type << std::endl;
 	if (type=='g')
-	disc_mating(parents, children, generation_size, map, mt);
+		disc_mating(parents, children, generation_size, map, mt);
+	else if (type=='r') 
+		rand_mating(parents, children, generation_size, mt);
+	else if (type=='a') 
+	{
+		if (t<T)
+			rand_2pop(parents, children, generation_size/4, 3*generation_size/4, mt);
+		else
+			rand_mating(parents, children, generation_size, mt);
+	}
 	else 
-	rand_mating(parents, children, generation_size, mt);
+	{
+		std::cerr << "Invalid mating type. Valid options for -y are g, r, a." << std::endl;
+		exit(0);
+	}
 }
 
 void 
@@ -1024,7 +1078,7 @@ main(int argc, char *argv[] )
 	bool binary=false, p_pedigree=false, p_names=false, p_traits=false, p_geography=false, p_dist=false, p_header=false, p_matrix=false, noselect=false, noprint=false;
 	bool p_stats=false;
 
-	int N=1200, t=10, k=500, n_trait=50, skip=100, sub_sample_size=-1;
+	int N=1200, T=0, t=10, k=500, n_trait=50, skip=100, sub_sample_size=-1;
 
 	uint32_t *mask;
 
@@ -1042,6 +1096,7 @@ main(int argc, char *argv[] )
 
 	env.optional_arg('N',"number", 	N,	"please provide a number.", "number of individuals in the populations.");
 	env.optional_arg('g',"gen", 	t,	"please provide a number.", "number of generations the simulation runs.");
+	env.optional_arg('T',"time", 	T,	"please provide a number.", "time of switch.");
 	env.optional_arg('s',"sites", 	k,	"please provide a number.", "number of sites/32.");
 	env.optional_arg('v',"var", 	n_trait,"please provide a number.", "number of loci effecting the trait.");
 	env.optional_arg('c',"chiasma",	r,	"please provide a number.", "number of recombinations events per individual per generation.");
@@ -1241,7 +1296,7 @@ main(int argc, char *argv[] )
 //		#pragma omp parallel for
 
 		std::cerr << __LINE__ << " y:" << y << std::endl; 
-		iter(parents, children, N, type, map, mt);
+		iter(parents, children, N, type, map, mt, y, T);
 
 		for (size_t x=0; x<N; x++)
 		{

@@ -377,19 +377,21 @@ int main (int argc, char **argv){
 					//std::cerr << 
 //					memcpy(Bitsum+this_site*WORD, d1, WORD*BLOCK*sizeof(UINT) );
 //					memcpy(Hetsum+this_site*WORD, h1, WORD*BLOCK*sizeof(UINT) );
-					if(this_site*WORD+WORD*BLOCK*sizeof(UINT)<WORD*sizeof(UINT)*Pstates.genome_size() )
+					//if( (this_site*WORD+WORD*this_block)<WORD*Pstates.genome_size() )
 					{
-						memcpy(Bitsum+this_site*WORD, d1, WORD*BLOCK*sizeof(UINT) );
-						memcpy(Hetsum+this_site*WORD, h1, WORD*BLOCK*sizeof(UINT) );
+						memcpy(Bitsum+this_site*WORD, d1, WORD*this_block*sizeof(UINT) );
+						memcpy(Hetsum+this_site*WORD, h1, WORD*this_block*sizeof(UINT) );
 					}
 
 				} else {
-					memcpy(d1, Bitsum+this_site*WORD, WORD*BLOCK*sizeof(UINT) );
-					memcpy(h1, Hetsum+this_site*WORD, WORD*BLOCK*sizeof(UINT) );
+					memcpy(d1, Bitsum+this_site*WORD, WORD*this_block*sizeof(UINT) );
+					memcpy(h1, Hetsum+this_site*WORD, WORD*this_block*sizeof(UINT) );
 				}
-				this_site+=BLOCK;
-				if(this_site>=size) not_set=false;
-
+				this_site+=this_block;
+				if(this_site>=size) {
+					not_set=false;
+				}
+					
 				}
 
 #ifdef DEBUG
@@ -511,8 +513,8 @@ int main (int argc, char **argv){
 						   			   +MmMm*(1.0-OX)*(0.0-OY)/4.
 						   			   +MmMm*(1.0-OX)*(1.0-OY)/4.
 						   +mmMM*(0-OX)*(1.-OY)+MmMM*(0.0-OX)*(1.-OY)/2.+MMMM*(1.-OX)*(1.-OY) 
-						   		       +MmMM*(1.0-OX)*(1.-OY)/2. )/sqrt(OX*(1-OX)*(1-OY)*OY )/2./(1.+f);
-					Theta_w+=WT*Den;
+						   		       +MmMM*(1.0-OX)*(1.-OY)/2. )/sqrt(OX*(1-OX)*(1-OY)*OY )/2.;
+					Theta_w+=WT*Den*(1.+f);
 
 					double W=pow(d2, 2)-2*pow(d2,3)+pow(d2,4);
 					k=1./d2+1./(1.-d2)-3.;
@@ -532,7 +534,7 @@ int main (int argc, char **argv){
 						   +mmMm*(0.-OY)*(1.-OY)+MmMm*(0.-OY)*(1.-OY)+MMMm*(0.-OY)*(1.-OY)
 						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) )/Den;
 					//std::cerr << f*(-f_X-f_Y) << ", " << W*Den << std::endl;
-					f_p+=f*(-f_X-f_Y)*W*Den;
+					f_p+=f*(f-f_X-f_Y)*W*Den;
 					f_w+=W*Den;
 					
 					double q=1-d2;
@@ -588,28 +590,20 @@ int main (int argc, char **argv){
 		if(indX!=-1 or indY!=-1) return 0;
 
 		buffer_rel[z].b_=2*Theta/Theta_w;
-		//std::cerr << k << ", " << k_w << std::endl;
+
 		f_p=f_p/f_w;
 		D2=D2/D2_w;
 		D1=D1/D1_w;
 	
-		//std::cerr << f_p*D1 << ", " << D1 << ", " << D2 << std::endl;
-	
-	//	std::cerr << "1: " << f_X/f_X_w << std::endl;
-	//	std::cerr << "2: " << f_Y/f_Y_w << std::endl;
-	//	std::cerr << "3: " << k << std::endl;
-	//	std::cerr << "4: " << f_p << std::endl;
-	//	std::cerr << "5: " << (1.-f_p-f_p*f_p+f_p*k) << std::endl;
-//		std::cerr << k*beta(1) << ", " << beta(0) << ", " << f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) << std::endl;
-//		k=3.5;
 		buffer_rel[z].d_=D2*beta(1)+D1*beta(0)+D1*f_p;//+f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) )/(1.+f_p*(k-1)-f_p*f_p)*4;
 		buffer_rel[z].bd_=(gamma_XY+gamma_YX)/(gamma_XY_w+gamma_YX_w);
-		buffer_rel[z].fx_=0;
+	
+/*		buffer_rel[z].fx_=0;
 		buffer_rel[z].fy_=0;
 		buffer_rel[z].f_=f_p;
 		buffer_rel[z].k_=0;
 		buffer_rel[z].d1_=beta(0);
-		buffer_rel[z].d2_=beta(1);
+		buffer_rel[z].d2_=beta(1);*/
 		size_t x, y;
 		T.get_xy(x,y);
 		buffer_rel[z].set_X_name(x);
