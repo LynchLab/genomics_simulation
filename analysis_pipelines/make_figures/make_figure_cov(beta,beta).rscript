@@ -1,5 +1,5 @@
 PYPATH<-"../python_utilities/"
-DATAFILE<-"../../analysis_files/mapgd_relatedness2.out"
+DATAFILE<-"../../analysis_files/mapgd_relatedness.out"
 GCTAFILE1<-"../../analysis_files/gcta.grm.gz"
 GCTAFILE2<-"../../analysis_files/gcta.d.grm.gz"
 PLINKFILE<-"../../analysis_files/plink.genome"
