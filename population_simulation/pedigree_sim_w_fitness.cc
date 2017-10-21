@@ -15,7 +15,7 @@
 #include "map_file.h"
 
 //#define REC		//Define if you want linkage between sites, leave undefined for free recombination. 
-//#define MUT		//Define if you want to introduce mutation each generation.
+#define MUT		//Define if you want to introduce mutation each generation.
 
 #define LOCI	32	//Number of loci in a byte. Leave it at 32 unless you are me.
 #define BINS	20
