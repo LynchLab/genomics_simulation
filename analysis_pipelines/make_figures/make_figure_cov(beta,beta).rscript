@@ -158,7 +158,7 @@ dev.off()
 
 png("g_vs_g.png")
 par(mar=MAR2, family=FONT, font.lab=2)
-plot(as.vector(VG), as.vector(true_g), xlim=c(-20,20), ylim=c(-20,20), col=set_alpha(COLMAPGD,0.05), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(S),"(", bold(beta), ",", bold(delta), ")"[ij] ) ),  ylab=expression(paste("Cov(", bold(beta)[i], ",", bold(delta)[j], "]/Cov(", bold(beta), ", " , bold(delta), ")") ) )
+plot(as.vector(VG), as.vector(true_g), xlim=c(-60,60), ylim=c(-60,60), col=set_alpha(COLMAPGD,0.05), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(S),"(", bold(beta), ",", bold(delta), ")"[ij] ) ),  ylab=expression(paste("Cov(", bold(beta)[i], ",", bold(delta)[j], "]/Cov(", bold(beta), ", " , bold(delta), ")") ) )
 m<-rangemean(as.vector(true_g), as.vector(VG), 100)
 points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
 abline(0,1, lwd=2, col="black", lty=2)
