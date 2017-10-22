@@ -5,7 +5,7 @@ GCTAFILE2<-"../../analysis_files/gcta.d.grm.gz"
 PLINKFILE<-"../../analysis_files/plink.genome"
 COVFILE="../../analysis_files/cov.txt"
 
-CALC<-FALSE
+CALC<-TRUE
 
 KAPPAFILE<-"../../analysis_files/const.txt"
 
