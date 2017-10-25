@@ -30,6 +30,7 @@ class State : public virtual Data
 {
 private:
 	size_t size_, sites_, cached_sites_, block_size_, lz4_buffer_size_;
+	uint8_t k_;
 
 	static const Registration registered;
 	static Data * create(const std::vector <std::string> & Columns){
@@ -39,7 +40,7 @@ private:
 	bool cached_, transposed_;
 	void increase_buffer_(void);
 	
-	char *lz4_ptr_, *lz4_start_, *lz4_end_, *lz4_last_;  
+	char *lz4_ptr_, *lz4_start_, *lz4_end_, *lz4_last_, *temp_lz4_ptr_;  
 public:
 	State();		//!< constructor needed by map_file. String should be column names. 
 	State(const std::vector <std::string> &);	
@@ -112,16 +113,22 @@ public:
 	State(const uint32_t &, const uint32_t &, const uint32_t &);
 	~State();
 
+	void set_k(const uint8_t &);
+	uint8_t get_k (void) const;
+
 	void uncompress (uint32_t *a, uint32_t *b);
+	void uncompress_inplace (uint32_t *a, uint32_t *b);
 	void uncompress (uint32_t *a, uint32_t *b, const uint32_t &k);
 	void uncompress (uint32_t *a, uint32_t *b, State_stream &) const;
 
 	void cache (void);
 	void rewind (void);
+	void advance (void);
 
 	void transpose (void);
-
+	
 	void compress (const uint32_t *a, const uint32_t *b);
+	void compress_inplace (const uint32_t *a, const uint32_t *b);
 
 	void clear(void);
 

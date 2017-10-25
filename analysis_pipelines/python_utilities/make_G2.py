@@ -22,7 +22,7 @@ for line in sys.stdin:
 	l=line.strip('\n').split('\t')
 	if len(l)<5:
 		break
-	l=map(float, l)
+	l=map(float, l[0:5])
 	try:
 		x=names[l[0]]
 	except:

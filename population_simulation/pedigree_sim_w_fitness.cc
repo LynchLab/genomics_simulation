@@ -359,7 +359,7 @@ public:
 		W2=new double *[NTRAITS];
 
 		std::vector<uint32_t> v(NLOCI*32);
-		for (size_t x=0; x<(NLOCI-1)*32; x++) v[x]=x;
+		for (size_t x=0; x<NLOCI*32-1; x++) v[x]=x;
 		std::random_shuffle(v.begin(), v.end());
 
 		std::vector<uint32_t> ks(v.begin(), v.begin()+NTRAITS);	
@@ -405,13 +405,13 @@ public:
 			x2z[x]=z;
 
 			W1[x]=new double[3];
-			W1[x][0]=-0.001;//-a_norm(mt);
+			W1[x][0]=-a_norm(mt);
 			switch (mode)
 			{
 				case 0:
 				case 2:
 				case 4:
-					W1[x][1]=-W1[x][0]; 
+					W1[x][1]=W1[x][0];
 					break;
 				case 1:
 				case 3:
@@ -824,7 +824,7 @@ print_cov(const Trait &traits, State &sites, uint32_t *mask2, std::ostream &out)
 		//std::cerr << k << "::" << z << "-" << P1[0] << std::endl;
 		const uint32_t mask=MASK[z];
 
-		const long double a=traits.W1[y][0];
+		const long double a=-traits.W1[y][0];
 		const long double d=traits.W1[y][1];
 		const long double p=get_freq(P, sites.sample_size(), z);  
 		const long double q=1.-p;
@@ -834,9 +834,6 @@ print_cov(const Trait &traits, State &sites, uint32_t *mask2, std::ostream &out)
 		long double beta[3]={-p*2.*alpha,(q-p)*alpha,2.*q*alpha};
 		long double delta[3]={d*(-2.*p*p+D),d*(2.*p*q+D),d*(-2.*q*q+D)};
 	
-
-//		long double beta[3]={-a,0,a};
-//		long double delta[3]={0,d,0};
 
 		for (size_t i=0; i<sites.sample_size(); ++i){
 			if ( mask2[i >> 5] & (1 << (i & 0x1F) ) ) 

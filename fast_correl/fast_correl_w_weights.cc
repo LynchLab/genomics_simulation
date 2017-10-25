@@ -506,6 +506,7 @@ int main (int argc, char **argv){
 				{
 					//assume a=-d
 					double WT=pow(d2,3)-pow(d2,4);
+					//double WT=sqrt(d2-0.5*pow(d2,2) ); //gcta weight...
 					Theta+=WT*(mmmm*(0-OX)*(0-OY)+Mmmm*(1.0-OX)*(0-OY)/2.+MMmm*(1.-OX)*(0-OY)
 								  +Mmmm*(0.0-OX)*(0-OY)/2.
 						   +mmMm*(0-OX)*(1.0-OY)/2.+MmMm*(0.0-OX)*(0.0-OY)/4.+MMMm*(1.-OX)*(0.0-OY)/2.

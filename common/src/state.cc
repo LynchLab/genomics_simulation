@@ -13,6 +13,8 @@ State::State ()
 	lz4_last_ = lz4_start_;
 	lz4_end_ = lz4_start_ + LZ4_BUFFER_SIZE;
 
+	temp_lz4_ptr_=lz4_ptr_;
+
 	sites_=0;
 	size_=0;
 	cached_sites_=false;
@@ -60,6 +62,8 @@ State::State(const std::vector <std::string> &column_names)
 		lz4_last_ = lz4_start_+buffer_size;
 		lz4_end_ = lz4_start_ + lz4_buffer_size_;
 		block_size_=sizeof(uint32_t)*size_;
+
+		temp_lz4_ptr_=lz4_ptr_;
 	}
 }
 
@@ -72,6 +76,7 @@ State::State(const uint32_t &sample_size, const uint32_t &sites_size, const uint
 	lz4_ptr_=lz4_start_;
 	lz4_last_ = lz4_start_ + buffer_size;
 	lz4_end_ = lz4_start_ + lz4_buffer_size_;
+	temp_lz4_ptr_=lz4_ptr_;
 
 	size_=sample_size;
 	sites_=sites_size;
@@ -104,6 +109,44 @@ State::~State()
 		//std::cerr << "deleting " << size_t(lz4_start_) << std::endl;
 		delete [] lz4_start_;
 		lz4_start_=NULL;
+	}
+}
+
+
+void 
+State::uncompress_inplace (uint32_t *a, uint32_t *b)
+{
+	temp_lz4_ptr_=lz4_ptr_;
+
+/*	if (!cached_)
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from uncached stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}*/
+
+	if (sites_) 
+	{
+		int ret;
+		//std::cerr << (long int)(lz4_end_-lz4_ptr_) << ", " << (long int)(lz4_ptr_-lz4_start_) << ", " << (long int)(lz4_last_-lz4_ptr_) << ", " << (long int)(lz4_end_) << std::endl;
+		ret=LZ4_decompress_fast (temp_lz4_ptr_, (char *)a, block_size_);
+		if (ret > 0)
+		{
+			temp_lz4_ptr_+=ret;
+		} else {
+			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
+			exit(LZ4);
+		}
+		ret=LZ4_decompress_fast (temp_lz4_ptr_, (char *)b, block_size_);	
+		if (ret > 0)
+		{
+			temp_lz4_ptr_+=ret;
+		} else {
+			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
+			exit(LZ4);
+		}
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
 	}
 }
 
@@ -382,7 +425,7 @@ State::uncompress (uint32_t *a, uint32_t *b, const uint32_t &k)
 {
 	//std::cerr << "started at " << cached_sites_-sites_ << std::endl;
 	if ( k < cached_sites_-sites_) rewind();
-	while (cached_sites_-sites_ < k) 
+	while (cached_sites_-sites_ <= k) 
 	{
 	//	std::cerr << "uncompressed " << cached_sites_-sites_ << std::endl;
 		if (sites_==0) {
@@ -452,6 +495,43 @@ State::increase_buffer_(void)
 	lz4_start_=new_lz4;
 }
 
+void
+State::advance(void)
+{
+	lz4_ptr_=temp_lz4_ptr_;
+	++sites_;
+	k_=0;
+	cached_=false;
+}
+
+void 
+State::compress_inplace (const uint32_t *a, const uint32_t *b)
+{
+	if (lz4_end_-lz4_ptr_ < 2*block_size_ ) increase_buffer_();
+
+	temp_lz4_ptr_=lz4_ptr_;
+	int size;
+
+	size=LZ4_compress_default( (const char*) a, temp_lz4_ptr_, block_size_,  size_t (lz4_end_-temp_lz4_ptr_) > INT_MAX ? INT_MAX : size_t (lz4_end_-temp_lz4_ptr_) );
+	if (size==0) 
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	temp_lz4_ptr_+=size;
+	size=LZ4_compress_default( (const char*) b, temp_lz4_ptr_, block_size_,  size_t (lz4_end_-temp_lz4_ptr_) > INT_MAX ? INT_MAX : size_t (lz4_end_-temp_lz4_ptr_) );
+	if (size==0) 
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	temp_lz4_ptr_+=size;
+	if (lz4_end_==temp_lz4_ptr_)
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+}
 void 
 State::compress (const uint32_t *a, const uint32_t *b)
 {
@@ -640,3 +720,14 @@ State sub_sample(const State &state, const size_t &sub_sample, const uint32_t *m
 	//ret.write(std::cerr);
 	return ret;
 }
+uint8_t
+State::get_k(void) const
+{
+	return k_;
+}
+
+void
+State::set_k(const uint8_t &k)
+{
+	k_=k;
+};
