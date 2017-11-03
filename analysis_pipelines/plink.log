@@ -1,0 +1,13 @@
+PLINK v1.90b3.43 32-bit (13 Nov 2016)
+Options in effect:
+  --genome ../analysis_files/plink
+  --vcf ../analysis_files/states.vcf
+
+Hostname: deskpro109996
+Working directory: /nfs/users/nfs_m/ma18/src/genomics_simulation/analysis_pipelines
+Start time: Thu Oct 19 14:40:40 2017
+
+Error: Invalid --genome parameter '../analysis_files/plink'.
+For more information, try 'plink --help [flag name]' or 'plink --help | more'.
+
+End time: Thu Oct 19 14:40:40 2017

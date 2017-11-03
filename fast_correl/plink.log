@@ -1,0 +1,12 @@
+PLINK v1.90b3.43 32-bit (13 Nov 2016)
+Options in effect:
+  --memory
+
+Hostname: deskpro109996
+Working directory: /nfs/users/nfs_m/ma18/src/genomics_simulation/fast_correl
+Start time: Tue Oct 24 17:05:29 2017
+
+Error: Missing --memory parameter.
+For more information, try 'plink --help [flag name]' or 'plink --help | more'.
+
+End time: Tue Oct 24 17:05:29 2017

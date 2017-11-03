@@ -1,0 +1,47 @@
+join <- function(matricies){
+	nmatrix<-length(matricies)
+	rnm<-sqrt(nmatrix)
+	fsize<-0
+	for (x in 1:rnm)
+	{
+		fsize<-fsize+ncol(matricies[[x]])
+	}
+	ret<-matrix( c(rep(0, fsize^2) ), ncol=fsize, nrow=fsize) 
+	for (X in 0:(rnm-1))
+	{
+		for (Y in 0:(rnm-1))
+		{
+			m<-matricies[[X*rnm+Y+1]]
+
+			number_col<-ncol(m)
+			number_row<-nrow(m)
+
+			dest_row<-0
+			dest_col<-0
+
+			if(X>0){
+				for (x in 1:X )
+				{
+					dest_row<-dest_row+nrow(matricies[[x]])
+				}
+			}
+			if (Y>0)
+			{
+				for (x in 1:Y )
+				{
+					dest_col<-dest_col+ncol(matricies[[x]])
+				}
+			}
+
+			for (x in 1:number_row)
+			{
+				for (y in 1:number_col)
+				{
+					ret[dest_row+x,dest_col+y]<-m[x,y]
+				}
+			}
+			message(paste("Dest: ", dest_row, dest_col) )
+		}
+	}
+	return(ret) 
+}

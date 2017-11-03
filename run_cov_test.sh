@@ -6,9 +6,9 @@ cd analysis_files/
 #pedigree_sim -N 2700 -s 10000 -g 9001 -lbnGmdt -k 1000 -v 5000 -e 0.008 -Q 0 -S 0.003 > ../sequences/states.bin
 #8998
 #pedigree_sim -y r -T 8998 -N 2700 -s 10000 -g 9001 -lbnGmdt -k 1000 -v 20000 -e 0.008 -Q 0 -S 0.005 > ../sequences/states.bin
- pedigree_sim -y a -T 8995 -N 1200 -s 10000 -g 9001 -bnGmdt -k 1000 -v 20000 -e 0.008 -Q 0 -S 0.01 > ../sequences/states.bin
-#pedigree_sim -T 8998 -N 2700 -s 10000 -g 9001 -bnGmdt -k 1000 -v 5000 -e 0.008 -Q 0 -S 0.003 > ../sequences/states.bin
-#pedigree_sim -N 9408 -s 40000 -g 9001 -bnGmdt -k 1000 -v 1000 -e 0.008 > ../sequences/states.bin
+pedigree_sim -y g -N 12 -s 1 -g 11 -lnGmdt -k 10 -v 32 -e 0.008 -Q 0 -S 0.01 > ../sequences/states.bin
+#pedigree_sim -T 8998 -N 10092 -s 10000 -g 9001 -bnGmdt -k 1000 -v 5000 -e 0.008 -Q 0 -S 0.003 > ../sequences/states.bin
+#pedigree_sim -N 10092 -s 40000 -g 9001 -bnGmdt -k 1000 -v 1000 -e 0.008 > ../sequences/states.bin
 cd ../analysis_pipelines/
 cat ../sequences/states.bin | call_relatedness ../analysis_files/name-file.txt > ../analysis_files/mapgd_relatedness.out
 #cat ../sequences/states.bin | get_kappa_f ../analysis_files/name-file.txt > ../analysis_files/const.txt

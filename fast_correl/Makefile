@@ -12,7 +12,7 @@ LDLIBS=-lgsl -lblas -L ../common/ -lmapgd -L ~/src/lz4/lib -llz4
 
 DEBUG=-g -D DEBUG
 
-CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) #-fopenmp #$(DEBUG) #-mpopcnt
+CXXFLAGS=$(VERSION) $(STD) $(MODE) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) #$(DEBUG) #-mpopcnt
 
 #CXXFLAGS=$(VERSION) $(STD) $(DEBUG) $(WARNINGS) -fno-exceptions -pedantic $(INCLUDE) -fopenmp
 
@@ -32,7 +32,9 @@ SUBDIR=
 
 #>! TODO ORGANIZE THESE!
 
-MAIN=fast_correl_w_weights.o triu_index.o
+#MAIN=fast_correl_w_weights2.o triu_index.o
+#MAIN=fast_correl_w_weights.o triu_index.o
+MAIN=slow_correl_w_weights.o triu_index.o
 
 #MAIN=get_kappa_f.o
 #TARGET=get_kappa_f

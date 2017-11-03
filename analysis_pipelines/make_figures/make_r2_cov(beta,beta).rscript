@@ -1,0 +1,129 @@
+PYPATH<-"../python_utilities/"
+DATAFILE<-"../../analysis_files/mapgd_relatedness.out"
+GCTAFILE1<-"../../analysis_files/gcta.grm.gz"
+GCTAFILE2<-"../../analysis_files/gcta.d.grm.gz"
+PLINKFILE<-"../../analysis_files/plink.genome"
+COVFILE="../../analysis_files/cov.txt"
+
+CALC<-TRUE
+
+KAPPAFILE<-"../../analysis_files/const.txt"
+
+source("figures.conf")
+
+t<-head(read.csv(COVFILE, sep="	", skip=1), -1) 
+
+#const<-read.csv(KAPPAFILE) 
+
+a<-as.matrix(t[grepl("beta_[0123456789]*", names(t) ) ] )
+d<-as.matrix(t[grepl("delta_[0123456789]*", names(t) ) ] )
+
+alpha<-colSums(a)
+delta<-colSums(d)
+
+N<-length(alpha)
+n<-N
+#2700
+DIM<-dim(a)[1]
+
+if(CALC)
+{
+system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_A2.py ", N, " ", n, " > ../../analysis_files/A.csv", sep="" ) )
+system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D2.py ", N, " ", n, " > ../../analysis_files/D.csv", sep="" ) )
+system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_G2.py ", N, " ", n, " > ../../analysis_files/G.csv", sep="" ) )
+
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D21.py ", N, " ", n, " > ../../analysis_files/D2.csv", sep="" ) )
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D22.py ", N, " ", n, " > ../../analysis_files/D4.csv", sep="" ) )
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_F2.py  ", N, " ", n, " > ../../analysis_files/F.csv", sep="" ) )
+
+system(paste("zcat ", GCTAFILE1, " | python-2.7.9 ", PYPATH, "make_gactA.py  ", N, " ", n, " > ../../analysis_files/gctaA.csv", sep="" ) )
+system(paste("zcat ", GCTAFILE2, " | python-2.7.9 ", PYPATH, "make_gactD.py  ", N, " ", n, " > ../../analysis_files/gctaD.csv", sep="" ) )
+system(paste("cat ", PLINKFILE, " | python-2.7.9 ", PYPATH, "make_plinkA.py ", N, " ", n, " > ../../analysis_files/plinkA.csv", sep="" ) )
+}
+
+VA<-as.matrix(read.csv("../../analysis_files/A.csv", sep=",", header=FALSE) )
+VD<-as.matrix(read.csv("../../analysis_files/D.csv", sep=",", header=FALSE) )
+VG<-as.matrix(read.csv("../../analysis_files/G.csv", sep=",", header=FALSE) )
+
+if(CALC)
+{
+system(paste("python-2.7.9 ", PYPATH, "make_true_A.py ", COVFILE, " > ../../analysis_files/true_A.csv", sep="" ) )
+system(paste("python-2.7.9 ", PYPATH, "make_true_D.py ", COVFILE, " > ../../analysis_files/true_D.csv", sep="" ) )
+system(paste("python-2.7.9 ", PYPATH, "make_true_G.py ", COVFILE, " > ../../analysis_files/true_G.csv", sep="" ) )
+}
+
+true_a<-as.matrix(read.csv("../../analysis_files/true_A.csv", sep=",", header=FALSE) )
+true_d<-as.matrix(read.csv("../../analysis_files/true_D.csv", sep=",", header=FALSE) )
+true_g<-as.matrix(read.csv("../../analysis_files/true_G.csv", sep=",", header=FALSE) )
+
+gctaA<-as.matrix(read.csv("../../analysis_files/gctaA.csv", sep=",", header=FALSE) )
+gctaD<-as.matrix(read.csv("../../analysis_files/gctaD.csv", sep=",", header=FALSE) )
+plinkA<-as.matrix(read.csv("../../analysis_files/plinkA.csv", sep=",", header=FALSE) )
+
+Vdelta<-VD[1:n,1:n]
+VA<-VA[1:n, 1:n]*2
+VG<-VG[1:n, 1:n]
+gctaA<-gctaA[1:n, 1:n]
+gctaD<-gctaD[1:n, 1:n]
+gctaA<-gctaA
+plinkA<-plinkA[1:n, 1:n]
+
+
+library(regress)
+
+z<-as.matrix(alpha[1:n]+delta[1:n], ncol=n, nrow=1)
+z<-z/sd(as.vector(z) )
+#r<-regress(z~1, ~VA+VG+Vdelta)
+
+sA<-var(alpha)#r$sigma[1]
+sD<-var(delta)#r$sigma[3]
+sAD<-cov(alpha, delta )#r$sigma[2]
+
+V<-sA*VA+sD*Vdelta#+sAD*VG
+IV<-solve(V)
+#V<-sA*true_a+sD*true_d#+sAD*true_g
+#V2<-cov(a+d, a+d)
+z_hat<-c()
+
+for (x in 1:n)
+{
+	u=V[x,]
+	z_hat<-c(z_hat, t(z[-x]-mean(z[-x]) ) %*% IV[-x,-x] %*% u[-x] )
+}
+#plot(z_hat, z, pch=20,  cex.lab=LABSIZE, cex.axis = AXISSIZE, col=COLMAPGD,  xlab=expression(paste("Estimated phenotype") ),  ylab=expression(paste("True phenotype") ) ) 
+
+#r<-regress(z~1, ~gctaA+gctaD)
+#sA<-r$sigma[1]
+#sD<-r$sigma[2]
+#sAD<-r$sigma[3]
+
+V<-sA*gctaA+sD*gctaD
+IV<-solve(V)
+z_hat2<-c()
+for (x in 1:n)
+{
+	u=V[x,]
+	z_hat2<-c(z_hat2, t(z[-x]-mean(z[-x]) ) %*% IV[-x,-x] %*% u[-x] )
+}
+
+png("z_vs_z_hat.png")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(z_hat, z, pch=20,  cex.lab=LABSIZE, cex.axis = AXISSIZE, col=COLMAPGD,  xlab=expression(paste("Estimated phenotype") ),  ylab=expression(paste("True phenotype") ) ) 
+points(z_hat2, z, pch=20, col=COLGCTA)
+
+m<-rangemean(as.vector(z), as.vector(z_hat), 100)
+points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
+m<-rangemean(as.vector(z), as.vector(z_hat2), 100)
+points(m[,1], m[,2], type='l', col=shade(COLGCTA, 0.5), lwd=2)
+
+abline(0,1,lwd=2, col="black", lty=2)
+dev.off()
+print(summary(lm(z ~ z_hat )))
+print(summary(lm(z ~ z_hat2)))
+
+
+print(summary(lm(as.vector(true_a) ~ as.vector(VA))))
+print(summary(lm(as.vector(true_a) ~ as.vector(gctaA))))
+
+print(summary(lm(as.vector(true_d) ~ as.vector(Vdelta))))
+print(summary(lm(as.vector(true_d) ~ as.vector(gctaD))))

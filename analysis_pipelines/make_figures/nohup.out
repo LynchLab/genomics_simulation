@@ -1,0 +1,189 @@
+Registering fonts with R
+Abyssinica SIL already registered with pdfFonts().
+cmex10 already registered with pdfFonts().
+cmmi10 already registered with pdfFonts().
+cmr10 already registered with pdfFonts().
+cmsy10 already registered with pdfFonts().
+No regular (non-bold, non-italic) version of DejaVu Serif. Skipping setup for this font.
+No regular (non-bold, non-italic) version of DejaVu Serif Condensed. Skipping setup for this font.
+Droid Sans Ethiopic already registered with pdfFonts().
+Droid Sans Fallback already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Droid Serif. Skipping setup for this font.
+No regular (non-bold, non-italic) version of FreeSerif. Skipping setup for this font.
+KacstArt already registered with pdfFonts().
+KacstBook already registered with pdfFonts().
+KacstDecorative already registered with pdfFonts().
+KacstDigital already registered with pdfFonts().
+KacstFarsi already registered with pdfFonts().
+KacstLetter already registered with pdfFonts().
+KacstNaskh already registered with pdfFonts().
+KacstOffice already registered with pdfFonts().
+KacstOne already registered with pdfFonts().
+KacstPen already registered with pdfFonts().
+KacstPoster already registered with pdfFonts().
+KacstQurn already registered with pdfFonts().
+KacstScreen already registered with pdfFonts().
+KacstTitle already registered with pdfFonts().
+KacstTitleL already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Kinnari. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Mono. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Sans. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Sans Narrow. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Serif. Skipping setup for this font.
+mry_KacstQurn already registered with pdfFonts().
+NanumBarunGothic already registered with pdfFonts().
+NanumGothic already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Norasi. Skipping setup for this font.
+Rachana already registered with pdfFonts().
+TakaoPGothic already registered with pdfFonts().
+Tibetan Machine Uni already registered with pdfFonts().
+CM Roman already registered with pdfFonts().
+CM Roman Asian already registered with pdfFonts().
+CM Roman CE already registered with pdfFonts().
+CM Roman Cyrillic already registered with pdfFonts().
+CM Roman Greek already registered with pdfFonts().
+CM Sans already registered with pdfFonts().
+CM Sans Asian already registered with pdfFonts().
+CM Sans CE already registered with pdfFonts().
+CM Sans Cyrillic already registered with pdfFonts().
+CM Sans Greek already registered with pdfFonts().
+CM Symbol already registered with pdfFonts().
+CM Typewriter already registered with pdfFonts().
+CM Typewriter Asian already registered with pdfFonts().
+CM Typewriter CE already registered with pdfFonts().
+CM Typewriter Cyrillic already registered with pdfFonts().
+CM Typewriter Greek already registered with pdfFonts().
+gzip: ../../analysis_files/gcta.grm.gz: No such file or directory
+gzip: ../../analysis_files/gcta.d.grm.gz: No such file or directory
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+Error in solve.default(V) : 
+  Lapack routine dgesv: system is exactly singular: U[1,1] = 0
+Calls: solve -> solve.default
+Execution halted
+Registering fonts with R
+Abyssinica SIL already registered with pdfFonts().
+cmex10 already registered with pdfFonts().
+cmmi10 already registered with pdfFonts().
+cmr10 already registered with pdfFonts().
+cmsy10 already registered with pdfFonts().
+No regular (non-bold, non-italic) version of DejaVu Serif. Skipping setup for this font.
+No regular (non-bold, non-italic) version of DejaVu Serif Condensed. Skipping setup for this font.
+Droid Sans Ethiopic already registered with pdfFonts().
+Droid Sans Fallback already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Droid Serif. Skipping setup for this font.
+No regular (non-bold, non-italic) version of FreeSerif. Skipping setup for this font.
+KacstArt already registered with pdfFonts().
+KacstBook already registered with pdfFonts().
+KacstDecorative already registered with pdfFonts().
+KacstDigital already registered with pdfFonts().
+KacstFarsi already registered with pdfFonts().
+KacstLetter already registered with pdfFonts().
+KacstNaskh already registered with pdfFonts().
+KacstOffice already registered with pdfFonts().
+KacstOne already registered with pdfFonts().
+KacstPen already registered with pdfFonts().
+KacstPoster already registered with pdfFonts().
+KacstQurn already registered with pdfFonts().
+KacstScreen already registered with pdfFonts().
+KacstTitle already registered with pdfFonts().
+KacstTitleL already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Kinnari. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Mono. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Sans. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Sans Narrow. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Serif. Skipping setup for this font.
+mry_KacstQurn already registered with pdfFonts().
+NanumBarunGothic already registered with pdfFonts().
+NanumGothic already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Norasi. Skipping setup for this font.
+Rachana already registered with pdfFonts().
+TakaoPGothic already registered with pdfFonts().
+Tibetan Machine Uni already registered with pdfFonts().
+CM Roman already registered with pdfFonts().
+CM Roman Asian already registered with pdfFonts().
+CM Roman CE already registered with pdfFonts().
+CM Roman Cyrillic already registered with pdfFonts().
+CM Roman Greek already registered with pdfFonts().
+CM Sans already registered with pdfFonts().
+CM Sans Asian already registered with pdfFonts().
+CM Sans CE already registered with pdfFonts().
+CM Sans Cyrillic already registered with pdfFonts().
+CM Sans Greek already registered with pdfFonts().
+CM Symbol already registered with pdfFonts().
+CM Typewriter already registered with pdfFonts().
+CM Typewriter Asian already registered with pdfFonts().
+CM Typewriter CE already registered with pdfFonts().
+CM Typewriter Cyrillic already registered with pdfFonts().
+CM Typewriter Greek already registered with pdfFonts().
+
+Execution halted
+Registering fonts with R
+Abyssinica SIL already registered with pdfFonts().
+cmex10 already registered with pdfFonts().
+cmmi10 already registered with pdfFonts().
+cmr10 already registered with pdfFonts().
+cmsy10 already registered with pdfFonts().
+No regular (non-bold, non-italic) version of DejaVu Serif. Skipping setup for this font.
+No regular (non-bold, non-italic) version of DejaVu Serif Condensed. Skipping setup for this font.
+Droid Sans Ethiopic already registered with pdfFonts().
+Droid Sans Fallback already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Droid Serif. Skipping setup for this font.
+No regular (non-bold, non-italic) version of FreeSerif. Skipping setup for this font.
+KacstArt already registered with pdfFonts().
+KacstBook already registered with pdfFonts().
+KacstDecorative already registered with pdfFonts().
+KacstDigital already registered with pdfFonts().
+KacstFarsi already registered with pdfFonts().
+KacstLetter already registered with pdfFonts().
+KacstNaskh already registered with pdfFonts().
+KacstOffice already registered with pdfFonts().
+KacstOne already registered with pdfFonts().
+KacstPen already registered with pdfFonts().
+KacstPoster already registered with pdfFonts().
+KacstQurn already registered with pdfFonts().
+KacstScreen already registered with pdfFonts().
+KacstTitle already registered with pdfFonts().
+KacstTitleL already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Kinnari. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Mono. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Sans. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Sans Narrow. Skipping setup for this font.
+No regular (non-bold, non-italic) version of Liberation Serif. Skipping setup for this font.
+mry_KacstQurn already registered with pdfFonts().
+NanumBarunGothic already registered with pdfFonts().
+NanumGothic already registered with pdfFonts().
+No regular (non-bold, non-italic) version of Norasi. Skipping setup for this font.
+Rachana already registered with pdfFonts().
+TakaoPGothic already registered with pdfFonts().
+Tibetan Machine Uni already registered with pdfFonts().
+CM Roman already registered with pdfFonts().
+CM Roman Asian already registered with pdfFonts().
+CM Roman CE already registered with pdfFonts().
+CM Roman Cyrillic already registered with pdfFonts().
+CM Roman Greek already registered with pdfFonts().
+CM Sans already registered with pdfFonts().
+CM Sans Asian already registered with pdfFonts().
+CM Sans CE already registered with pdfFonts().
+CM Sans Cyrillic already registered with pdfFonts().
+CM Sans Greek already registered with pdfFonts().
+CM Symbol already registered with pdfFonts().
+CM Typewriter already registered with pdfFonts().
+CM Typewriter Asian already registered with pdfFonts().
+CM Typewriter CE already registered with pdfFonts().
+CM Typewriter Cyrillic already registered with pdfFonts().
+CM Typewriter Greek already registered with pdfFonts().
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+pdf 
+  2 

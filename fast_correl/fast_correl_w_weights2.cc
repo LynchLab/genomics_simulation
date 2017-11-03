@@ -6,9 +6,6 @@
 #include "correl_data.h"
 #include "triu_index.h"
 
-#include <gsl/gsl_multifit.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_linalg.h>
 #include <cstring>
 #include <sstream>
 #include <tuple>
@@ -281,13 +278,6 @@ int main (int argc, char **argv){
 
 	for (size_t z=0; z<J; ++z)
 	{
-		gsl_multifit_linear_workspace * work = gsl_multifit_linear_alloc (pow(N*2, 1), 2);
-		gsl_matrix *X = gsl_matrix_alloc (pow(N*2, 1), 2);
-		gsl_matrix *XINV = gsl_matrix_alloc (pow(N*2, 1), 2);
-		gsl_vector *Y = gsl_vector_alloc (pow(N*2, 1) );
-		gsl_vector *w = gsl_vector_alloc (pow(N*2, 1) );
-		gsl_vector *c = gsl_vector_alloc (2);
-		gsl_matrix *cov = gsl_matrix_alloc (2, 2);
 	
 		if (indX!=-1 or indY!=-1)
 		{
@@ -526,25 +516,17 @@ int main (int argc, char **argv){
 					Theta_w+=WT*(1.+f)*Den;
 
 					double W=pow(d2, 2)-2*pow(d2,3)+pow(d2,4);
-					k=1./d2+1./(1.-d2)-3.;
-
-					D1+=1./(1.-pow(f,2)+f*(k-1.))*Den*W;
-					D2+=1.*k/(1.-pow(f,2)+f*(k-1.))*Den*W;
-
-					D1_w+=Den*W;
-					D2_w+=Den*W;
+					double W2=-4*pow(d2, 4)+8*pow(d2,3)-5*pow(d2,2)+d2;
 
 					f_X=(mmmm*(0-OX)*(0-OX)+Mmmm*(0.-OX)*(1.-OX)+MMmm*(1.-OX)*(1.-OX)
 						   +mmMm*(0-OX)*(0-OX)+MmMm*(0.-OX)*(1.-OX)+MMMm*(1.-OX)*(1.-OX)
-						   +mmMM*(0-OX)*(0-OX)+MmMM*(0.-OX)*(1.-OX)+MMMM*(1.-OX)*(1.-OX) )/(OX*(1-OX) )/Den;
+						   +mmMM*(0-OX)*(0-OX)+MmMM*(0.-OX)*(1.-OX)+MMMM*(1.-OX)*(1.-OX) )/(OX*(1-OX) );
 					
 
 					f_Y=(mmmm*(0-OY)*(0-OY)+Mmmm*(0-OY)*(0-OY)+MMmm*(0-OY)*(0-OY)
 						   +mmMm*(0.-OY)*(1.-OY)+MmMm*(0.-OY)*(1.-OY)+MMMm*(0.-OY)*(1.-OY)
-						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) )/Den;
+						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) );
 					//std::cerr << f*(-f_X-f_Y) << ", " << W*Den << std::endl;
-					f_p+=f*(f-f_X-f_Y)*W*Den;
-					f_w+=W*Den;
 					
 					double q=1-d2;
 					//2*p1**4 - 3*p1**3 + p1**2 
@@ -566,78 +548,26 @@ int main (int argc, char **argv){
 
 					mu=(mmmm*(0-OY)*(0-OY)*(0-OX)*(0-OX)+Mmmm*(0.-OY)*(0.-OY)*(1.-OX)*(0.0-OX)+MMmm*(0.-OY)*(0.-OY)*(1.-OX)*(1.-OX)
 							+mmMm*(1.-OY)*(0.-OY)*(0.-OX)*(0.-OX)+MmMm*(0.-OY)*(1.-OY)*(0.-OX)*(1.-OX)+MMMm*(0.-OY)*(1.-OY)*(1.-OX)*(1.-OX)
-							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(1.-OX)*(0.-OX)+MMMM*(1.-OY)*(1.-OY)*(1.-OX)*(1.-OX) )/Den;
+							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(1.-OX)*(0.-OX)+MMMM*(1.-OY)*(1.-OY)*(1.-OX)*(1.-OX) );
 
-					double k1x=pow(OX*(1-OX), 2);
-					double k2x=OX*(1-OX)*(3*OX*OX-3*OX+1);
-					double k1y=pow(OY*(1-OY), 2);
-					double k2y=OY*(1-OY)*(3*OY*OY-3*OY+1);
+					//(dd1*W1 + dd2*W2 + f1*fx1*W1 + f2*fx2*W2 + f1*fy1*W1+ f2*fy2*W2)/( W1+W2 + f1**2*W1 + f1*(4*p1**4 - 8*p1**3 + 5*p1**2 - p1) + f2**2*W2 + f2*(4*a2**2*p2**4 - 8*a2**2*p2**3 + 5*a2**2*p2**2 - a2**2*p2))
 
-					k1=sqrt(k1x*k1y);
-					k2=sqrt(k2x*k2y);
-					gsl_matrix_set (X, c2, 0, k1);
-					gsl_matrix_set (X, c2, 1, k2);
-					gsl_vector_set (Y, c2, mu);
-					gsl_vector_set (w, c2, Den*W);
-				} /*
-				if (indX!=-1 or indY!=-1){
-
-					Theta_w=0;
-				        Theta=0;
-				        f_X=0;
-				        f_Y=0;
-				        gamma_XY=0;
-				        gamma_XY_w=0;
-				        gamma_YX=0;
-			        	gamma_YX_w=0;
-				} */
+					D1+=W*mu/pow(M*(1-M), 2)-f*W*f_X-f*W*f_Y;
+					D1_w+=Den*(W+pow(f, 2)*W+f*W2);
+				} 
 		}
-		gsl_multifit_wlinear (X, w, Y, c, cov, &chisq, work);
-//		std::cerr << Theta/Theta_w << std::endl;
-//		exit(0);
-#define beta(i) (gsl_vector_get(c,(i)))
-		if(indX!=-1 or indY!=-1) return 0;
 
 		buffer_rel[z].b_=Theta/Theta_w;
-
-		f_p=f_p/f_w;
-		D2=D2/D2_w;
-		D1=D1/D1_w;
-	
-		buffer_rel[z].d_=D2*beta(1)+D1*beta(0)+D1*f_p;//+f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) )/(1.+f_p*(k-1)-f_p*f_p)*4;
+		buffer_rel[z].d_=D1/D1_w;
 		buffer_rel[z].bd_=(gamma_XY+gamma_YX)/(gamma_XY_w+gamma_YX_w);
 	
-/*		buffer_rel[z].fx_=0;
-		buffer_rel[z].fy_=0;
-		buffer_rel[z].f_=f_p;
-		buffer_rel[z].k_=0;
-		buffer_rel[z].d1_=beta(0);
-		buffer_rel[z].d2_=beta(1);*/
 		size_t x, y;
 		T.get_xy(x,y);
 		buffer_rel[z].set_X_name(x);
 		buffer_rel[z].set_Y_name(y);
 
-/*
-		if (x==y) {
-			buffer_rel[z].b_=4*Theta/Theta_w;
-			buffer_rel[z].bd_=(gamma_XY+gamma_YX)/(gamma_XY_w)/2;
-			buffer_rel[z].d_=(k*beta(1)+beta(0)+f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) )/(1.-f_p-f_p*f_p+f_p*k);
-		}
-*/
-
 		if (T.get_k()!=T.size() ) ++T;
 
-
-		gsl_vector_free(Y);
-		gsl_vector_free(w);
-		gsl_vector_free(c);
-
-		gsl_matrix_free(X);
-		gsl_matrix_free(XINV);
-		gsl_matrix_free(cov);
-		
-		gsl_multifit_linear_free(work);
 	}
 		for (size_t z=0; z<J; ++z)
 			rel_file.write(buffer_rel[z]);

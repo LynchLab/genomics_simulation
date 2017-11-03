@@ -18,7 +18,7 @@
 #define BUFFER_SIZE2	1000
 #define WORD	32
 #define UINT	uint32_t
-#define STEP	N9 << 1	
+#define STEP	NN9 << 1	
 #define STEP_F	N << 1	
 #define BLOCK	256
 
@@ -26,6 +26,7 @@ uint64_t LIM;
 uint64_t N;
 uint64_t N2;
 uint64_t N9;
+uint64_t NN9;
 uint64_t SIZE;
 uint64_t XMIN;
 
@@ -41,6 +42,17 @@ inline size_t hash2(const uint16_t &d, const uint16_t &i, const uint16_t &j)
 	return 9*d+3*i+j;
 }
 
+inline size_t hash3(const uint16_t &d, const uint16_t &f, const uint16_t &i, const uint16_t &j)
+{
+	return N9*d+9*f+3*i+j;
+}
+
+inline size_t hash3b(const Triangular_index &T, const Triangular_index &t, const uint16_t &d, const uint16_t &f, const uint16_t &i, const uint16_t &j)
+{
+
+	return ( (T.get_k()-t.get_k() ) << 1)*NN9+N9*d+9*f+3*i+j;
+}
+
 inline size_t hash_F(const Triangular_index &T, const Triangular_index &t, const uint16_t &d)
 {
 
@@ -49,6 +61,7 @@ inline size_t hash_F(const Triangular_index &T, const Triangular_index &t, const
 
 inline size_t hash_F2(const uint16_t &d)
 {
+
 	return d;
 }
 
@@ -220,6 +233,7 @@ int main (int argc, char **argv){
 	N=names.sample_names.size();
 	N2=N*2;
 	N9=N*9;
+	NN9=N*N*9;
 
 	if (namex!="") {
 		indX=find(names.sample_names.begin(), names.sample_names.end(), namex) - names.sample_names.begin();
@@ -419,8 +433,8 @@ int main (int argc, char **argv){
 						{
 							if(d1_ptr[k]!=0 && d1_ptr[k]!=N2) 
 							{
-								++D_ptr[hash2(d1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k))];
-								F_ptr[hash_F2(d1_ptr[k])]+=h1_ptr[k];
+								++D_ptr[hash3(d1_ptr[k], h1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k))];
+								//F_ptr[hash_F2(d1_ptr[k])]+=h1_ptr[k];
 							}
 						}
 						h1_ptr+=h_step;
@@ -439,52 +453,40 @@ int main (int argc, char **argv){
 			//delete [] inc;
 		}
 
-		double k_w, k=0, f_p=0, f_w=0, f_Y=0, f_X=0, Theta=0, Theta_w=0, gamma_XY=0, gamma_XY_w=0, gamma_YX=0, gamma_YX_w=0, Z=0, Z_w=0;
-		double mu=0, k1=0, k2=0, D1=0, D1_w=0, D2=0, D2_w=0;
+		double f_Y=0, f_X=0, Theta=0, Theta_w=0, gamma_XY=0, gamma_XY_w=0, gamma_YX=0, gamma_YX_w=0;
+		double mu=0, D1=0, D1_w=0;
 
 		double chisq;
 
-/*
-		Theta_w=0;
-		k=0;
-		f_p=0;
-		f_w=0;
-		k_w=0;
-		Theta=0;
-		f_X=0;
-		f_X_w=0;
-		f_Y=0;
-		f_Y_w=0;
-		gamma_XY=0;
-		gamma_XY_w=0;
-		gamma_YX=0;
-		gamma_YX_w=0;
-*/
 		size_t c2_min = 0;
 
 		for (size_t c2=(1+c2_min); c2<(N*2-c2_min); c2++)
 		{
+		for (size_t f2=0; f2<N; f2++)
+		{
 				//x,y
 				//double WD, CD, d2=double(c2)/double(N*2.-4.);
 				double WD, CD, d2=double(c2)/double(N*2.);//-4.);
+				double W2=-4*pow(d2, 4)+8*pow(d2,3)-5*pow(d2,2)+d2;
 				//std::cerr << d2 << std::endl;
 
-				double mmmm=double(D[hash(T, T_MIN, c2, 0, 0)]);
-				double Mmmm=double(D[hash(T, T_MIN, c2, 1, 0)]);
-				double MMmm=double(D[hash(T, T_MIN, c2, 2, 0)]);
-				double mmMm=double(D[hash(T, T_MIN, c2, 0, 1)]);
-				double MmMm=double(D[hash(T, T_MIN, c2, 1, 1)]);
-				double MMMm=double(D[hash(T, T_MIN, c2, 2, 1)]);
-				double mmMM=double(D[hash(T, T_MIN, c2, 0, 2)]);
-				double MmMM=double(D[hash(T, T_MIN, c2, 1, 2)]);
-				double MMMM=double(D[hash(T, T_MIN, c2, 2, 2)]);
+				double mmmm=double(D[hash3b(T, T_MIN, c2, f2, 0, 0)]);
+				double Mmmm=double(D[hash3b(T, T_MIN, c2, f2, 1, 0)]);
+				double MMmm=double(D[hash3b(T, T_MIN, c2, f2, 2, 0)]);
+				double mmMm=double(D[hash3b(T, T_MIN, c2, f2, 0, 1)]);
+				double MmMm=double(D[hash3b(T, T_MIN, c2, f2, 1, 1)]);
+				double MMMm=double(D[hash3b(T, T_MIN, c2, f2, 2, 1)]);
+				double mmMM=double(D[hash3b(T, T_MIN, c2, f2, 0, 2)]);
+				double MmMM=double(D[hash3b(T, T_MIN, c2, f2, 1, 2)]);
+				double MMMM=double(D[hash3b(T, T_MIN, c2, f2, 2, 2)]);
 
 				double Den=mmmm+Mmmm+MMmm+mmMm+MmMm+MMMm+mmMM+MmMM+MMMM;
+
 
 //				if (d2>0.4 && d2<0.6)
 //					std::cerr << F[hash_F(T, T_MIN, c2)] << ", " << N << ", " << Den << ", " << d2 << std::endl;
 //
-				double f=1.-double(F[hash_F(T, T_MIN, c2)]/double(Den*N) )/(2.*d2*(1.-d2) );
+				double f=1.-double(f2/double(N) )/(2.*d2*(1.-d2) );
 
 
 				double OX=((Mmmm+MmMm+MmMM)/2.+MMmm+MMMm+MMMM+1)/Den;
@@ -495,15 +497,12 @@ int main (int argc, char **argv){
 
 				double M=d2;
 
-				//std::cerr << d2 << ", " << F[hash_F(T, T_MIN, c2)]/double(Den*N) << ", " << f << std::endl;
 
 				//std::cerr <<  mmmm << ", " << Mmmm << ", " << MMmm << ", " << mmMm << ", " << MmMm << ", " << MMMm << ", " << mmMM << ", " <<  MmMM << ", " << MMMM << ", " << d2 << std::endl;
 
-				if (OX > 0 && OY > 0 && OX < 1 && OY <1 && M!=0.5 && Den > 0)
+				if (OX > 0 && OY > 0 && OX < 1 && OY < 1 && Den > 0)
 				{
-					//assume a=-d
 					double WT=pow(d2,3)-pow(d2,4);
-					//double WT=sqrt(d2-0.5*pow(d2,2) ); //gcta weight...
 					Theta+=WT*(mmmm*(0-OX)*(0-OY)+Mmmm*(1.0-OX)*(0-OY)/2.+MMmm*(1.-OX)*(0-OY)
 								  +Mmmm*(0.0-OX)*(0-OY)/2.
 						   +mmMm*(0-OX)*(1.0-OY)/2.+MmMm*(0.0-OX)*(0.0-OY)/4.+MMMm*(1.-OX)*(0.0-OY)/2.
@@ -522,17 +521,13 @@ int main (int argc, char **argv){
 						   			   +MmMm*(1.0-OX)*(1.0-OY)/4.
 						   +mmMM*(0-OX)*(1.-OY)+MmMM*(0.0-OX)*(1.-OY)/2.+MMMM*(1.-OX)*(1.-OY) 
 						   		       +MmMM*(1.0-OX)*(1.-OY)/2. )*4./d2/(1.-d2)/(1.+f)/2./Den << std::endl;
+
+					std::cerr <<  mmmm << ", " << Mmmm << ", " << MMmm << ", " << mmMm << ", " << MmMm << ", " << MMMm << ", " << mmMM << ", " <<  MmMM << ", " << MMMM << ", " << d2 << std::endl;
 					*/
-					Theta_w+=WT*(1.+f)*Den;
+					Theta_w+=WT*Den*(1+f);
 
 					double W=pow(d2, 2)-2*pow(d2,3)+pow(d2,4);
-					k=1./d2+1./(1.-d2)-3.;
 
-					D1+=1./(1.-pow(f,2)+f*(k-1.))*Den*W;
-					D2+=1.*k/(1.-pow(f,2)+f*(k-1.))*Den*W;
-
-					D1_w+=Den*W;
-					D2_w+=Den*W;
 
 					f_X=(mmmm*(0-OX)*(0-OX)+Mmmm*(0.-OX)*(1.-OX)+MMmm*(1.-OX)*(1.-OX)
 						   +mmMm*(0-OX)*(0-OX)+MmMm*(0.-OX)*(1.-OX)+MMMm*(1.-OX)*(1.-OX)
@@ -543,18 +538,17 @@ int main (int argc, char **argv){
 						   +mmMm*(0.-OY)*(1.-OY)+MmMm*(0.-OY)*(1.-OY)+MMMm*(0.-OY)*(1.-OY)
 						   +mmMM*(1.-OY)*(1.-OY)+MmMM*(1.-OY)*(1.-OY)+MMMM*(1.-OY)*(1.-OY) )/(OY*(1-OY ) )/Den;
 					//std::cerr << f*(-f_X-f_Y) << ", " << W*Den << std::endl;
-					f_p+=f*(f-f_X-f_Y)*W*Den;
-					f_w+=W*Den;
-					
 					double q=1-d2;
 					//2*p1**4 - 3*p1**3 + p1**2 
+					if (M!=0.5)
+					{
 					double GW=2*pow(d2, 4)-3*pow(d2, 3)+pow(d2, 2);
 
 					gamma_XY+=GW*(mmmm*(0-OX)*(0-OX)*(0-OY)+Mmmm*(0.-OX)*(1.-OX)*(0-OY)+MMmm*(1.-OX)*(1.-OX)*(0-OY)
 							+(mmMm*(0-OX)*(0-OX)*(1.-OY)+MmMm*(1.-OX)*(0.-OX)*(1.-OY)+MMMm*(1.-OX)*(1.-OX)*(1.-OY) )/2.
 							+(mmMm*(0-OX)*(0-OX)*(0.-OY)+MmMm*(1.-OX)*(0.-OX)*(0.-OY)+MMMm*(1.-OX)*(1.-OX)*(0.-OY) )/2.
 							+mmMM*(0-OX)*(0-OX)*(1.-OY)+MmMM*(1.-OX)*(0.-OX)*(1.-OY)+MMMM*(1.-OX)*(1.-OX)*(1.-OY) )/(M*(1-M)*(1-2*M)); 
-					gamma_XY_w+=f*GW*Den;
+					gamma_XY_w+=GW*Den*f;
 
 					gamma_YX+=GW*(mmmm*(0-OY)*(0-OY)*(0-OX)+Mmmm*(0.-OY)*(0.-OY)*(0.0-OX)/2.+MMmm*(0.-OY)*(0.-OY)*(1.-OX)
 									    +Mmmm*(0.-OY)*(0.-OY)*(1.0-OX)/2.
@@ -562,49 +556,21 @@ int main (int argc, char **argv){
 									   	     +MmMm*(1.-OY)*(0.-OY)*(1.0-OX)/2.
 							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(0.0-OX)/2.+MMMM*(1.-OY)*(1.-OY)*(1.-OX) 
 									    	     +MmMM*(1.-OY)*(1.-OY)*(1.0-OX)/2.)/(M*(1-M)*(1-2*M) );
-					gamma_YX_w+=f*Den*GW;
+					gamma_YX_w+=Den*GW*f;
 
+					}
 					mu=(mmmm*(0-OY)*(0-OY)*(0-OX)*(0-OX)+Mmmm*(0.-OY)*(0.-OY)*(1.-OX)*(0.0-OX)+MMmm*(0.-OY)*(0.-OY)*(1.-OX)*(1.-OX)
 							+mmMm*(1.-OY)*(0.-OY)*(0.-OX)*(0.-OX)+MmMm*(0.-OY)*(1.-OY)*(0.-OX)*(1.-OX)+MMMm*(0.-OY)*(1.-OY)*(1.-OX)*(1.-OX)
-							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(1.-OX)*(0.-OX)+MMMM*(1.-OY)*(1.-OY)*(1.-OX)*(1.-OX) )/Den;
+							+mmMM*(1.-OY)*(1.-OY)*(0.-OX)*(0.-OX)+MmMM*(1.-OY)*(1.-OY)*(1.-OX)*(0.-OX)+MMMM*(1.-OY)*(1.-OY)*(1.-OX)*(1.-OX) );
 
-					double k1x=pow(OX*(1-OX), 2);
-					double k2x=OX*(1-OX)*(3*OX*OX-3*OX+1);
-					double k1y=pow(OY*(1-OY), 2);
-					double k2y=OY*(1-OY)*(3*OY*OY-3*OY+1);
-
-					k1=sqrt(k1x*k1y);
-					k2=sqrt(k2x*k2y);
-					gsl_matrix_set (X, c2, 0, k1);
-					gsl_matrix_set (X, c2, 1, k2);
-					gsl_vector_set (Y, c2, mu);
-					gsl_vector_set (w, c2, Den*W);
-				} /*
-				if (indX!=-1 or indY!=-1){
-
-					Theta_w=0;
-				        Theta=0;
-				        f_X=0;
-				        f_Y=0;
-				        gamma_XY=0;
-				        gamma_XY_w=0;
-				        gamma_YX=0;
-			        	gamma_YX_w=0;
-				} */
+					D1+=W*mu/pow(M*(1-M), 2)-W*f*f_X-W*f*f_Y;
+					D1_w+=Den*(W+pow(f, 2)*W+f*W2);
+				} 
 		}
-		gsl_multifit_wlinear (X, w, Y, c, cov, &chisq, work);
-//		std::cerr << Theta/Theta_w << std::endl;
-//		exit(0);
-#define beta(i) (gsl_vector_get(c,(i)))
-		if(indX!=-1 or indY!=-1) return 0;
+		}
 
 		buffer_rel[z].b_=Theta/Theta_w;
-
-		f_p=f_p/f_w;
-		D2=D2/D2_w;
-		D1=D1/D1_w;
-	
-		buffer_rel[z].d_=D2*beta(1)+D1*beta(0)+D1*f_p;//+f_p*(f_p-f_X/f_X_w-f_Y/f_Y_w) )/(1.+f_p*(k-1)-f_p*f_p)*4;
+		buffer_rel[z].d_=D1/D1_w;
 		buffer_rel[z].bd_=(gamma_XY+gamma_YX)/(gamma_XY_w+gamma_YX_w);
 	
 /*		buffer_rel[z].fx_=0;
