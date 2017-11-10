@@ -158,7 +158,6 @@ public:
 
 	double compression_ratio(void) const;
 
-
 	inline void swap(State &rhs)
 	{
 		std::swap(size_, rhs.size_);
@@ -171,6 +170,8 @@ public:
 		std::swap(lz4_end_, rhs.lz4_end_); 
 		std::swap(lz4_last_, rhs.lz4_last_);
 	}
+
+	bool empty(void);
 };
 	
 State sub_sample(const State &, const size_t &, const uint32_t *mask);

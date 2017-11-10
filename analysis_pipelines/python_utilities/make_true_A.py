@@ -14,7 +14,7 @@ for line in File:
 		M.append(map(float, line[1:]) )
 
 M=numpy.matrix(M)
-v=numpy.cov(M.transpose() )
+v=numpy.dot(M.transpose(), M )
 
 x=(len(line)-1)/2
 A=v[0:x, 0:x]

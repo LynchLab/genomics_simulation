@@ -1,0 +1,10 @@
+
+
+
+make_psd <- function(V)
+{
+	e<-svd(V)
+	D<-diag(e$values[1:k])
+	E<-e$vectors[1:n,1:k]
+	return()
+}

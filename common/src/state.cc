@@ -65,6 +65,7 @@ State::State(const std::vector <std::string> &column_names)
 
 		temp_lz4_ptr_=lz4_ptr_;
 	}
+	k_=0;
 }
 
 State::State(const uint32_t &sample_size, const uint32_t &sites_size, const uint32_t &buffer_size)
@@ -83,6 +84,7 @@ State::State(const uint32_t &sample_size, const uint32_t &sites_size, const uint
 	cached_sites_=sites_size;
 	block_size_=sizeof(uint32_t)*size_;
 	cached_=true;
+	k_=0;
 }
 
 State::State(const uint32_t &sample_size)
@@ -94,12 +96,14 @@ State::State(const uint32_t &sample_size)
 	cached_=false;
 	cached_sites_=0;
 	lz4_buffer_size_=LZ4_BUFFER_SIZE;
+	temp_lz4_ptr_=lz4_ptr_;
 
 	lz4_start_ = new char [lz4_buffer_size_];
 	lz4_ptr_=lz4_start_;
 	lz4_last_ = lz4_start_;
 	lz4_end_ = lz4_start_ + lz4_buffer_size_;
 	block_size_=sizeof(uint32_t)*size_;
+	k_=0;
 }
 
 State::~State()
@@ -620,8 +624,8 @@ State::write (std::ostream& out) const
 			}
 		}
 	}
-	delete set0;
-	delete set1;
+	delete [] set0;
+	delete [] set1;
 }
 	
 double 
@@ -659,8 +663,8 @@ State::read (std::istream& in)
 		}
 		compress(set0, set1);
 	}
-	delete set0;
-	delete set1;
+	delete [] set0;
+	delete [] set1;
 	cache();
 }
 
@@ -731,3 +735,8 @@ State::set_k(const uint8_t &k)
 {
 	k_=k;
 };
+
+bool State::empty(void)
+{
+	return sites_==0;
+}

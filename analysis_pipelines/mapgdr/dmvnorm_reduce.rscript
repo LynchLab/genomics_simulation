@@ -1,0 +1,30 @@
+
+
+
+dmvnorm_reduce <- function(x, V, k)
+{
+	if (exists("lastk"))
+	{
+		if(lastk!=k)
+		{
+			twopik<<-2^k*pi^k
+			lastk<<-k
+		}
+	} else {
+		twopik<<-2^k*pi^k
+		lastk<<-k
+	}
+	n<-dim(V)[1]
+	ptm<-proc.time()
+	e<-eigen(V)
+#	message("eigen decomp: "); print( proc.time()-ptm)
+	D<-diag(e$values[1:k])
+	E<-e$vectors[1:n,1:k]
+	ptm<-proc.time()
+	Vm<-E %*% solve(D) %*% t(E)
+#	message("Matrix inv: "); print( proc.time()-ptm)
+	ptm<-proc.time()
+	ret<-(-log( ( twopik*det(D) ) )/2+(-0.5* t(x) %*% Vm %*% x) ) 
+#	message("Fin calc:"); print(proc.time()-ptm)
+	return(ret)
+}

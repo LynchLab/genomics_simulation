@@ -344,7 +344,7 @@ public:
 	double **W1, **W2;
 	uint32_t ntraits;
 	std::map <uint32_t, uint32_t> k2x;
-	Trait (const size_t &NLOCI, const size_t &NTRAITS, std::mt19937 &mt, const double &var_a, const int &mode) 
+	Trait (const size_t &NLOCI, const size_t &NTRAITS, std::mt19937 &mt, const double &var_a, const unsigned int &mode) 
 	{
 
 		ntraits=NTRAITS;
@@ -367,23 +367,15 @@ public:
 		std::sort (ks.begin(), ks.end() );	
 
 		double mean_a=-var_a, mean_d=var_a;
-		
-		switch (mode)
-		{
-			case 4:
-			case 5:
-				mean_a=0;
-				break;
-			case 2:
-			case 3:
-				mean_d=0;
-				break;
-			case 0:
-			case 1:
-			default:
-				break;
-			
-		}
+	
+		/*
+		1 mean_a==0
+		2 mean_d==0
+		4 dom
+		8 rec
+		16 d=0	*/
+		if (mode & 0x0001) mean_a=0;
+		if (mode & 0x0002) mean_d=0;
 
 		std::normal_distribution<double> a_norm(mean_a, var_a);
 		std::normal_distribution<double> d_norm(mean_d, 0.75*var_a);
@@ -405,23 +397,18 @@ public:
 			x2z[x]=z;
 
 			W1[x]=new double[3];
-			W1[x][0]=-0.01;//-a_norm(mt);
-			switch (mode)
-			{
-				case 0:
-				case 2:
-				case 4:
-					W1[x][1]=W1[x][0];
-					break;
-				case 1:
-				case 3:
-				case 5:
-					W1[x][1]=d_norm(mt);
-					break;
-				default:
-					W1[x][1]=0;
-					break;
-			}
+			W1[x][0]=-a_norm(mt);
+			W1[x][1]=d_norm(mt);
+			if (mode & 0x0004)
+				W1[x][1]=W1[x][0];
+			if (mode & 0x0008)
+				W1[x][1]=-W1[x][0];
+			if (mode & 0x0010)
+				W1[x][1]=0;
+
+			//W1[x][0]=-0.01;//a_norm(mt);
+			//W1[x][1]=0.01;//d_norm(mt);
+
 			W1[x][2]=-W1[x][0];
 			
 			W2[x]=new double[3];

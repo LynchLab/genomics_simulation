@@ -1,4 +1,4 @@
-		#include "circular_list.h"
+#include "circular_list.h"
 #include "interface.h"
 #include "map_file.h"
 #include "state.h"
@@ -20,7 +20,7 @@
 #define UINT	uint32_t
 #define STEP	NN9 << 1	
 #define STEP_F	N << 1	
-#define BLOCK	256
+#define BLOCK	64
 
 uint64_t LIM;
 uint64_t N;
@@ -312,10 +312,10 @@ int main (int argc, char **argv){
 		{
 			State_stream state_ptr;//=
 			Pstates.set_stream(state_ptr);
-			memset(D, 0, sizeof(uint32_t)*SIZE);
+			memset(D, 0, sizeof(uint32_t)*SIZE*BLOCK);
 			memset(F, 0, sizeof(uint32_t)*SIZE/9);
 			T_MIN=T;
-			T_MAX=T+SIZE/(2*9*N);
+			T_MAX=T+SIZE/(2*9*N*N);
 			if (T_MAX.get_k() > T.size() ) T_MAX.set(N-1, N);
 			//CHANGE TO LOOP
 			size_t size=Pstates.genome_size();
@@ -403,6 +403,7 @@ int main (int argc, char **argv){
 					memcpy(h1, Hetsum+this_site*WORD, WORD*this_block*sizeof(UINT) );
 				}
 				this_site+=this_block;
+				//std::cerr << this_site << " of " << size << std::endl;
 				if(this_site>=size) {
 					not_set=false;
 				}
@@ -420,7 +421,6 @@ int main (int argc, char **argv){
 					size_t x, y;
 					t.get_xy(x,y);
 					uint32_t *D_ptr=D+(t.get_k()-T_MIN.get_k())*(STEP);
-					uint32_t *F_ptr=F+(t.get_k()-T_MIN.get_k())*(STEP_F);
 
 					UINT *h1_ptr=h1;
 					UINT *d1_ptr=d1;
@@ -433,6 +433,8 @@ int main (int argc, char **argv){
 						{
 							if(d1_ptr[k]!=0 && d1_ptr[k]!=N2) 
 							{
+								//std::cerr << (t.get_k()-T_MIN.get_k())*(STEP)+hash3(d1_ptr[k], h1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k) ) << " of " << SIZE*BLOCK << std::endl;
+								//std::cerr << (t.get_k()-T_MIN.get_k())*(STEP) << " of " << SIZE*BLOCK << std::endl;
 								++D_ptr[hash3(d1_ptr[k], h1_ptr[k], get(P1_ptr, x, k)+get(P2_ptr, x, k), get(P1_ptr, y, k)+get(P2_ptr, y, k))];
 								//F_ptr[hash_F2(d1_ptr[k])]+=h1_ptr[k];
 							}

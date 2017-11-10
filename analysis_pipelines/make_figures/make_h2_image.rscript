@@ -1,0 +1,98 @@
+library(MASS)
+library(mvtnorm)
+PYPATH<-"../python_utilities/"
+DATAFILE<-"../../analysis_files/mapgd_relatedness.out"
+PHENOFILE="../../analysis_files/t_final.txt"
+COVFILE="../../analysis_files/cov.txt"
+
+MAPGDR<-"~/src/genomics_simulation/analysis_pipelines/mapgdr/"
+ 
+source(paste(MAPGDR, "dmvnorm_reduce.rscript", sep="") )
+
+CALC<-TRUE
+
+t<-head(read.csv(PHENOFILE, sep="	", skip=1), -1) 
+
+
+N<-dim(t)[1]
+n<-N
+
+u<-head(read.csv(COVFILE, sep="	", skip=1), -1) 
+
+u<-u[ rowSums(abs(u[,2:n*2]))!=0, ]
+ 
+a<-as.matrix(u[grepl("beta_[0123456789]*", names(u) ) ] )
+d<-as.matrix(u[grepl("delta_[0123456789]*", names(u) ) ] )
+
+alpha<-colSums(a)
+delta<-colSums(d)
+
+g<-a+d
+
+if(CALC)
+{
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_A2.py ", N, " ", n, " > ../../analysis_files/A.csv", sep="" ) )
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D2.py ", N, " ", n, " > ../../analysis_files/D.csv", sep="" ) )
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_G2.py ", N, " ", n, " > ../../analysis_files/G.csv", sep="" ) )
+}
+
+VA<-as.matrix(read.csv("../../analysis_files/A.csv", sep=",", header=FALSE) )
+VD<-as.matrix(read.csv("../../analysis_files/D.csv", sep=",", header=FALSE) )
+VG<-as.matrix(read.csv("../../analysis_files/G.csv", sep=",", header=FALSE) )
+
+VD<-VD[1:n, 1:n]
+VA<-VA[1:n, 1:n]
+VG<-VG[1:n, 1:n]
+
+W<-100
+I<-matrix( rep(-1/(n-1), n*n), ncol=n, nrow=n)
+diag(I)<-1
+
+source("figures.conf")
+
+#pdf("h2.pdf")
+
+par(mar=MAR2, family=FONT, font.lab=2)
+
+for (w in 0:4)
+{
+
+e<-mvrnorm(1, rep(0, n), I)
+
+z<-alpha+delta
+VARZ<-var(z)
+
+z<-z+e*2^w*VARZ
+
+h<-var(alpha)/var(z)
+H<-var(alpha+delta)/var(z)
+
+z<-z-mean(z)
+z<-z/sd(z)
+
+l<-matrix( rep(NA, W*W), ncol=W, nrow=W)
+
+message(H, ": ", h)
+
+for (x in 1:W){
+	for (y in 1:(W-x+1) ) {
+		for (g in -min(x,y):min(x,y) ){
+			p<-x/101
+			q<-y/101
+#			r<-g/101
+			s<-1-p-q
+#			l[x,y+x-1]<-max(l[x,y+x-1], dmvnorm_reduce(z, p*VA+q*VD+s*I, n-1), na.rm=TRUE)
+		#	message(p," " ,q," " ,r," " ,s," " ,l[x,y+x-1])
+		}
+	}
+}
+
+lmax<-max(l, na.rm=TRUE)
+q<-l
+q[abs(q)>abs(lmax)+3.8*2]<-NA
+
+#plot(0,pch='', ylim=c(0, 1), xlim=c(0,1) ,ylab=expression(H^2), xlab=expression(h^2), main=H, cex.lab=LABSIZE, cex.axis=AXISSIZE)
+#image(q, add=TRUE)
+#points(h, H, pch=20)
+}
+#dev.off()
