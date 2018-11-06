@@ -1,0 +1,5 @@
+makev2 <- function(m, ma, sa) {
+	I<-diag(m)
+	J<-matrix( rep(1, m^2), ncol=m, nrow=m)
+	( sa^2/m+(m*ma^2)/(m*(m-1)) )*I-ma^2/(m*(m-1))*J
+}

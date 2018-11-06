@@ -1,0 +1,20 @@
+mheatmap <- function(m) {
+	n <- dim(m)[1]
+	c <- m/max(abs(m))
+
+	r <- c
+	r[r>0]<-0
+	r<-1-abs(r)
+
+	b <- c
+	b[b<0]<-0
+	b<-1-abs(b)
+
+	g<-pmin(r,b)
+
+#matrix(rep(1, n*n), ncol=n, nrow=n)
+
+	col <- rgb(r, g, b)
+	dim(col) <- dim(r)
+	col
+}

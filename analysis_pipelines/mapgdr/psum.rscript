@@ -1,0 +1,5 @@
+psum<-function(S, P):
+	Sp<-ginv(S)
+	Pc<-
+	I<-
+	I-(I-Sp %*% 

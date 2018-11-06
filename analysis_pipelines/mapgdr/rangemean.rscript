@@ -4,7 +4,8 @@ rangemean<-function(X, Y, steps)
 	max<-max(Y, na.rm=TRUE)
 	range<-max-min
 	step_size<-range/steps
-	means<-matrix(0,ncol=2, nrow=steps)
+	means<-matrix(0,ncol=3, nrow=steps)
+	rmeans<-matrix(0,ncol=3, nrow=steps)
 	xsize<-length(X)
 
 	for (y in 1:xsize) 
@@ -12,6 +13,7 @@ rangemean<-function(X, Y, steps)
 		bin= floor( (Y[y]-min) / step_size)
 		means[bin,1]=means[bin,1]+X[y]
 		means[bin,2]=means[bin,2]+1
+		means[bin,3]=means[bin,3]+Y[y]
 	}
 #	for (x in 1:steps) {
 #		for (y in 1:xsize) {
@@ -27,8 +29,8 @@ rangemean<-function(X, Y, steps)
 #		}
 #	}
 	for (x in 1:steps) {
-		means[x,2]=means[x,1]/means[x,2] 
-		means[x,1]=min+step_size*(x-0.5)
+		rmeans[x,2]=means[x,1]/means[x,2] 
+		rmeans[x,1]=means[x,3]/means[x,2]
 	}
-	means
+	rmeans
 }

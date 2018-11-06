@@ -1,0 +1,61 @@
+PYPATH<-"../python_utilities/"
+DATAFILE<-"../../analysis_files/mapgd_relatedness.out"
+GCTAFILE1<-"../../analysis_files/gcta.grm.gz"
+GCTAFILE2<-"../../analysis_files/gcta.d.grm.gz"
+PLINKFILE<-"../../analysis_files/plink.genome"
+COVFILE="../../analysis_files/cov.txt"
+
+CALC<-TRUE
+
+ALPHAVALUE<-1
+
+source("figures.conf")
+
+t<-head(read.csv(COVFILE, sep="	", skip=1), -1) 
+
+t<-t[ rowSums(abs(t[,2:25]))!=0, ]
+
+a<-as.matrix(t[grepl("beta_[0123456789]*", names(t) ) ] )
+d<-as.matrix(t[grepl("delta_[0123456789]*", names(t) ) ] )
+
+l<-dim(a)[1]
+n<-dim(a)[2]
+
+alpha<-as.matrix(colSums(a), ncol=1, nrow=n)
+delta<-as.matrix(colSums(d), ncol=1, nrow=n)
+
+
+j<-matrix( rep(1, l), nrow=l, ncol=1)
+
+
+cd<-d-1/l* j %*% t(delta) 
+ca<-a-1/l* j %*% t(alpha) 
+
+c_ddT<-cd %*% t(cd)
+c_aaT<-ca %*% t(ca)
+
+ddT<-d %*% t(d)
+aaT<-a %*% t(a)
+
+source("../mapgdr/mheatmap.rscript")
+
+c<-mheatmap(ddT-diag(diag(ddT) ) )
+
+library(grid)
+
+grid.raster(c, interpolate=FALSE)
+
+ddT_ratio<-matrix(rep(0,l), nrow=l, ncol=1)
+c_ddT_ratio<-matrix(rep(0,l), nrow=l, ncol=1)
+
+aaT_ratio<-matrix(rep(0,l), nrow=l, ncol=1)
+c_aaT_ratio<-matrix(rep(0,l), nrow=l, ncol=1)
+
+for (x in 1:l )
+{
+	ddT_ratio[x,1]=sum(ddT[1:x, 1:x])/sum(diag(ddT)[1:x])
+	c_ddT_ratio[x,1]=sum(c_ddT[1:x, 1:x])/sum(diag(c_ddT)[1:x])
+	aaT_ratio[x,1]=sum(aaT[1:x, 1:x])/sum(diag(aaT)[1:x])
+	c_aaT_ratio[x,1]=sum(c_aaT[1:x, 1:x])/sum(diag(c_aaT)[1:x])
+
+}

@@ -1,0 +1,58 @@
+#source("rangestdev.rscript")
+
+rscatter_plot <- function(A, ..., col=NULL, STEPS=50, MAX=1.5)
+{
+#	do.call("plot", )
+	N<-dim(A)[1]
+	B<-list(...)
+	n<-length(B)
+
+	Y<-c(rep(as.vector(A), n) )
+	X<-c()
+	for (i in 1:n) X<-c(X, as.vector(B[[i]]) )
+	C<-c()
+	for (i in 1:n) C<-c(C, rep(set_alpha(col[i], ALPHAVALUE), N*N) )
+	P<-data.frame(Y, X, C)
+	P2 <- P[sample(nrow(P)),]
+
+	points(P2$Y, P2$X, col=as.character(P2$C), pch=20)
+
+	for (i in 1:n )
+	{
+		m<-rangestdev(as.vector(B[[i]]), as.vector(A), steps=STEPS, max=MAX)
+
+		go<-TRUE
+
+		while( go )
+		{
+
+		na <- which(is.na(m))
+		b <- min(na)
+
+		if (b==1) 
+		{
+			na <- which(!is.na(m[b:nrow(m),]) )
+			c <- min(na)
+			m<-m[c:nrow(m),] #else go<-FALSE
+			na <- which(is.na(m))
+			b <- min(na)
+		}
+
+		if (is.finite(b) ) 
+		{
+			sa<-matrix(m[1:(b-1),], ncol=3, nrow=(b-1))
+			na <- which(!is.na(m[b:nrow(m),]) )
+			c <- min(na)
+			if (is.finite(c) ) m<-m[(b+c):nrow(m),] else go<-FALSE
+		} else {
+			sa<-m[,]
+			go<-FALSE
+			c<-0
+		}
+
+		points(sa[,1], sa[,3], type='l', col=shade(col[i], 0.5), lwd=2)
+		polygon(c(sa[,1], rev(sa[,1]), sa[1,1] ), c(sa[,3]+sa[,2], rev(sa[,3]-sa[,2]), sa[1,1] ), border = shade(col[i], 0.5), col=set_alpha(col[i], 0.5), lty = par("lty") )
+
+		}
+	}
+}

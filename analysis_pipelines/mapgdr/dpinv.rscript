@@ -1,0 +1,39 @@
+library(MASS)
+library(expm)    
+
+
+p<-function(A)
+{
+	ginv(A)
+}
+
+dp <- function (A, D)
+{
+	n<-dim(A)[2]
+	I<-diag(n)
+	-p(A) %*% D %*%  p(A)+p(A) %*% t( p(A) ) %*% t(D) %*% (I-A %*% p(A) )+ (I-p(A) %*% A ) %*% t(D) %*% t(p(A) ) %*% p(A)  
+}
+
+k<-function(A, D)
+{
+	pA<-p(A)
+	n<-dim(A)[2]
+	I<-diag(n)
+	(pA %^% 2) %*% D %*% (I-A %*% pA )
+}
+
+dpd <- function (A, D)
+{
+	pA<-p(A)
+	m<-dim(A)[1]
+	n<-dim(A)[2]
+	I<-diag(n)
+	K<-(pA %^% 2) %*% D %*% (I-A %*% pA )
+	-pA %*% D %*% pA + K + t(K)
+}
+
+dpd2 <- function(A, D)
+{
+	iA<-solve(A)
+	-iA %*% D %*% iA 
+}

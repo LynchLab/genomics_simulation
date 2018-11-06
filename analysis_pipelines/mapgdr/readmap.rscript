@@ -1,4 +1,39 @@
 readmap<-function(filename)
 {
-	readcsv(read.csv(filename, sep="	", skip=1) -1)
+	message("readmap:reading ", filename)
+	f <- file(filename,"r")
+	first_line <- readLines(f,n=1)
+	close(f)
+
+	if(strsplit(first_line, "	")[[1]][1]=="@NAME:STATE" )
+	{
+		message("State file mode.")
+		t<-as.matrix(read.csv(text=paste0(head(readLines(filename), -1), collapse="\n"), sep='\t', skip=2, header=FALSE) )
+		M<-t
+		M[t==1]<-1
+		M[t==10]<-1
+		M[t==11]<-2
+		H<-t
+		H[t==1]<-1
+		H[t==10]<-1
+		H[t==11]<-0
+		message("done.")
+		return(list(M=M,H=H))
+	} else 
+	{
+		t<-head(read.csv(filename, sep='\t', skip=1), -1)
+	}
+	if(strsplit(first_line, "	")[[1]][1]=="@NAME:RELATEDNESS" )
+	{
+		N<-dim(t)[1]
+		Mt1=as.matrix(t[,2])
+		Ht1=as.matrix(t[,3])
+		MtH=as.matrix(t[,(N*0+4):(N*1+3)])
+		MtM=as.matrix(t[,(N*1+4):(N*2+3)])
+		HtH=as.matrix(t[,(N*2+4):(N*3+3)])
+		message("Relatedness done.")
+		return(list(Mt1=Mt1, Ht1=Ht1, MtM=MtM, HtH=HtH, MtH=MtH) )
+	}
+	message("done.")
+	return(t)
 }

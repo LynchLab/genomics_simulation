@@ -1,8 +1,9 @@
 import numpy
 import sys
 
-x=10
-M=[]
+x=0
+lines=0
+
 File=open(sys.argv[1])
 File.readline()
 File.readline()
@@ -10,20 +11,22 @@ File.readline()
 for line in File:
 	line=line.split()
 	m=map(float, line[1:])
+	if (x==0):
+		x=(len(line)-1)/2
+		A=numpy.zeros((x,x))
+		J=numpy.ones((x,x))
+		a=numpy.zeros((1,x))
 	if max(m)>0:
-		M.append(map(float, line[1:]) )
+		m=numpy.matrix(map(float, line[1:(x+1)]) )
+		A+=m.transpose()*m
+		a+=m
+		lines+=1
+a/=lines
+a=a.transpose()
 
-M=numpy.matrix(M)
-v=numpy.dot(M.transpose(), M )
-
-x=(len(line)-1)/2
-A=v[0:x, 0:x]
-D=v[x:,x:]
-G=v[0:x,x:]
+A=A-2.*a*a.transpose()
 
 A=A/numpy.mean(numpy.diag(A))
-D=D/numpy.mean(numpy.diag(D))
-G=G/numpy.mean(numpy.diag(G))
 
 A=A.tolist()
 

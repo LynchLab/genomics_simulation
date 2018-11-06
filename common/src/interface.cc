@@ -28,8 +28,13 @@ bool
 isfloat(const char *c)
 {
 	const char *s=c;
+	if (*c !=0 && (*c=='-' || std::isdigit(*c) ) ) ++c;
+	else return (*c==0 && c!=s);
 	while (*c !=0 && std::isdigit(*c) ) ++c;
 	if (*c !=0 && *c=='.') ++c;
+	while (*c !=0 && std::isdigit(*c) ) ++c;
+	if (*c !=0 && *c=='e') ++c;
+	if (*c !=0 && (*c=='-' || std::isdigit(*c) ) ) ++c;
 	while (*c !=0 && std::isdigit(*c) ) ++c;
 	return (*c==0 && c!=s);
 }
@@ -364,7 +369,9 @@ parsargs(int argc, char *argv[], Environment &env)
 					optopt=argv[optind]+1;
 					arg=env.args.begin();
 					while(arg!=arg_end){
+						//if (arg->opt!=0) {
 						if (*optopt==arg->opt){
+							{
 							if (argv[optind][2]!=0){
 								//TODO CHECK THE SUPER DANGERS SHIT HERE.
 								char* to=*(argv+optind);
@@ -382,8 +389,10 @@ parsargs(int argc, char *argv[], Environment &env)
 							} else {
 								std::cerr << env.name << ":" << " option --" << arg->lopt << " -" << arg->opt << " "<< arg->emsg  << std::endl; 
 							}
+							}
 							//TODO insert error evaluation...
 							break;
+						//}
 						} ++arg;
 					} if(arg==arg_end) {
 						while(*optopt!='\0'){
@@ -408,13 +417,35 @@ parsargs(int argc, char *argv[], Environment &env)
 				} else {
 					optopt=argv[optind]+2;
 					arg=env.args.begin();
-					while(arg!=arg_end){
-						if (strcmp(optopt, arg->lopt)==0){
-							optind+=arg->func(argc-optind, argv+optind, arg->parm);
-							arg->set=true;
+					while(arg!=arg_end)
+					{
+						if (strcmp(optopt, arg->lopt)==0)
+						{
+							/*if (argv[optind][opt]!=0){
+								std::cerr << "What does this code do??\n";
+								//TODO CHECK THE SUPER DANGERS SHIT HERE.
+								char* to=*(argv+optind);
+								char* from=*(argv+optind)+2;
+								do {*to=*from; ++to, ++from;} while((*from)!=0);
+								*to=0;
+								arg_ret=arg->func(argc-optind, argv+optind, arg->parm);
+							} *///else {
+								optind++;
+								std::cerr << argc-optind << "::" << *(argv+optind) << "::" << *(char *)(arg->parm) << std::endl;
+								arg_ret=arg->func(argc-optind, argv+optind, arg->parm);
+							//}
+							if(arg_ret!=ARG_ERROR) {
+								optind+=arg_ret;
+								arg->set=true;
+							} else {
+								std::cerr << env.name << ":" << " option --" << arg->lopt << " -" << arg->opt << " "<< arg->emsg  << std::endl; 
+							}
 							break;
-						} ++arg;
-					} if(arg==arg_end){
+						} 
+						++arg;
+					} 
+					if(arg==arg_end)
+					{
 						flag=env.flags.begin();
 						while(flag!=flag_end){
 							if (strcmp(optopt, flag->lopt)==0){
@@ -534,10 +565,18 @@ print_help(Environment env)
 	printf("Options:\n");
 	while (arg!=end){
 		//TODO Better length formating.
+		if (arg->opt!=0)
+		{
 		if (strlen(arg->lopt)>7)
 			printf("  -%c, --%s\t%s\n", arg->opt, arg->lopt, format_usage(arg->umsg, 24) );
 		else
 			printf("  -%c, --%s\t\t%s\n", arg->opt, arg->lopt, format_usage(arg->umsg, 24) );
+		} else {
+		if (strlen(arg->lopt)>7)
+			printf("      --%s\t%s\n", arg->lopt, format_usage(arg->umsg, 24) );
+		else
+			printf("      --%s\t\t%s\n", arg->lopt, format_usage(arg->umsg, 24) );
+		}
 		++arg;
 	}
 	std::list <Flag>::iterator flag=env.flags.begin();

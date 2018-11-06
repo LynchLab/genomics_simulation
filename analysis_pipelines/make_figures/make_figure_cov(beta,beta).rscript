@@ -1,263 +1,306 @@
 PYPATH<-"../python_utilities/"
-DATAFILE<-"../../analysis_files/mapgd_relatedness.out"
+DATAFILE <-"../../analysis_files/mapgd_relatedness_add.out"
+DATAFILE2<-"../../analysis_files/mapgd_relatedness.out"
 GCTAFILE1<-"../../analysis_files/gcta.grm.gz"
 GCTAFILE2<-"../../analysis_files/gcta.d.grm.gz"
 PLINKFILE<-"../../analysis_files/plink.genome"
 COVFILE="../../analysis_files/cov.txt"
+COVFILE2="../../analysis_files/cov2.txt"
 
-CALC<-TRUE
+#CALC<-TRUE
+CALC<-FALSE
+CI<-TRUE
 
-KAPPAFILE<-"../../analysis_files/const.txt"
+GRAPH_AD<-TRUE
 
-ALPHAVALUE<-1
+ALPHAVALUE<-0.01
 
 source("figures.conf")
+source("../mapgdr/readmap.rscript")
+source("../mapgdr/makev.rscript")
+source("../mapgdr/rscatter_plot.rscript")
 
-t<-head(read.csv(COVFILE, sep="	", skip=1), -1) 
+message(DATAFILE)
+V<-readmap(DATAFILE)
 
-#const<-read.csv(KAPPAFILE) 
-
-t<-t[ rowSums(abs(t[,2:25]))!=0, ]
-
-a<-as.matrix(t[grepl("beta_[0123456789]*", names(t) ) ] )
-d<-as.matrix(t[grepl("delta_[0123456789]*", names(t) ) ] )
-
-alpha<-colSums(a)
-delta<-colSums(d)
-
-N<-length(alpha)
+N<-(dim(V$Mt1)[1])
 n<-N
-#2700
-DIM<-dim(a)[1]
+
+message("Number of individuals: ", N)
+message("Dimensions of V:", dim(V) )
 
 if(CALC)
 {
-system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_A2.py ", N, " ", n, " > ../../analysis_files/A.csv", sep="" ) )
-system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D2.py ", N, " ", n, " > ../../analysis_files/D.csv", sep="" ) )
-system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_G2.py ", N, " ", n, " > ../../analysis_files/G.csv", sep="" ) )
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_A2.py ", N, " ", n, " > ../../analysis_files/A.csv", sep="" ) )
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D2.py ", N, " ", n, " > ../../analysis_files/D.csv", sep="" ) )
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_G2.py ", N, " ", n, " > ../../analysis_files/G.csv", sep="" ) )
+
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_mua.py ", N, " ", n, " > ../../analysis_files/mua.csv", sep="" ) )
+#system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_mud.py ", N, " ", n, " > ../../analysis_files/mud.csv", sep="" ) )
 
 #system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D21.py ", N, " ", n, " > ../../analysis_files/D2.csv", sep="" ) )
 #system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D22.py ", N, " ", n, " > ../../analysis_files/D4.csv", sep="" ) )
 #system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_F2.py  ", N, " ", n, " > ../../analysis_files/F.csv", sep="" ) )
 
+message("making gctaA.csv")
 system(paste("zcat ", GCTAFILE1, " | python-2.7.9 ", PYPATH, "make_gactA.py  ", N, " ", n, " > ../../analysis_files/gctaA.csv", sep="" ) )
+message("making gctaD.csv")
 system(paste("zcat ", GCTAFILE2, " | python-2.7.9 ", PYPATH, "make_gactD.py  ", N, " ", n, " > ../../analysis_files/gctaD.csv", sep="" ) )
+message("making plinkA.csv")
 system(paste("cat ", PLINKFILE, " | python-2.7.9 ", PYPATH, "make_plinkA.py ", N, " ", n, " > ../../analysis_files/plinkA.csv", sep="" ) )
 }
 
-VA<-as.matrix(read.csv("../../analysis_files/A.csv", sep=",", header=FALSE) )
-VD<-as.matrix(read.csv("../../analysis_files/D.csv", sep=",", header=FALSE) )
-VG<-as.matrix(read.csv("../../analysis_files/G.csv", sep=",", header=FALSE) )
+muA<-as.matrix(V$Mt1)
+muD<-as.matrix(V$Ht1)
 
-#true_a<-matrix(ncol=n, nrow=n)
-#true_d<-matrix(ncol=n, nrow=n)
-#true_g<-matrix(ncol=n, nrow=n)
-#true_v<-matrix(ncol=n, nrow=n)
+VG<-as.matrix(V$MtH)
+VA<-as.matrix(V$MtM)
+VD<-as.matrix(V$HtH)
 
-#for(x in 1:n) {
-#	for(y in x:n) {
-#		true_a[x,y]<-cov(a[,x], a[,y])
-#		true_a[y,x]<-true_a[x,y] 
+V<-readmap(DATAFILE2)
 
-#		true_d[x,y]<-cov(d[,x], d[,y])
-#		true_d[y,x]<-true_d[x,y] 
+mua<-as.matrix(V$Mt1)
+mud<-as.matrix(V$Ht1)
 
-#		true_g[x,y]<-cov(d[,x], a[,y])+cov(a[,x], d[,y])
-#		true_g[y,x]<-cov(d[,y], a[,x])+cov(a[,y], d[,x])
-
-#		true_v[x,y]<-cov(a[,x]+d[,x],a[,y]+d[,y] )
-#		true_v[y,x]<-true_v[x,y]
-#	}
-#}
-
-#true_a<-true_a/var(as.vector(a) )
-#true_d<-true_d/var(as.vector(d) )
-#true_g<-true_g/cov(as.vector(a), as.vector(d)  ) 
-#true_v<-true_v/var(as.vector(a)+as.vector(d) )
+Vg<-as.matrix(V$MtH)
+Va<-as.matrix(V$MtM)
+Vd<-as.matrix(V$HtH)
 
 if(CALC)
 {
+message("making true_A.csv")
 system(paste("python-2.7.9 ", PYPATH, "make_true_A.py ", COVFILE, " > ../../analysis_files/true_A.csv", sep="" ) )
+message("making true_D.csv")
 system(paste("python-2.7.9 ", PYPATH, "make_true_D.py ", COVFILE, " > ../../analysis_files/true_D.csv", sep="" ) )
+message("making true_G.csv")
 system(paste("python-2.7.9 ", PYPATH, "make_true_G.py ", COVFILE, " > ../../analysis_files/true_G.csv", sep="" ) )
 }
 
+if(CALC)
+{
+message("making true_A2.csv")
+system(paste("python-2.7.9 ", PYPATH, "make_true_A2.py ", COVFILE2, " > ../../analysis_files/true_A2.csv", sep="" ) )
+message("making true_D2.csv")
+system(paste("python-2.7.9 ", PYPATH, "make_true_D2.py ", COVFILE2, " > ../../analysis_files/true_D2.csv", sep="" ) )
+message("making true_G2.csv")
+system(paste("python-2.7.9 ", PYPATH, "make_true_G2.py ", COVFILE2, " > ../../analysis_files/true_G2.csv", sep="" ) )
+}
+
+if(GRAPH_AD)
+{
+message("Reading ../../analysis_files/true_A2.csv")
+true_a2<-as.matrix(read.csv("../../analysis_files/true_A2.csv", sep=",", header=FALSE) )
+message("Reading ../../analysis_files/true_D2.csv")
+true_d2<-as.matrix(read.csv("../../analysis_files/true_D2.csv", sep=",", header=FALSE) )
+message("Reading ../../analysis_files/true_G2.csv")
+true_g2<-as.matrix(read.csv("../../analysis_files/true_G2.csv", sep=",", header=FALSE) )
+}
+
+message("Reading ../../analysis_files/true_A.csv")
 true_a<-as.matrix(read.csv("../../analysis_files/true_A.csv", sep=",", header=FALSE) )
+message("Reading ../../analysis_files/true_D.csv")
 true_d<-as.matrix(read.csv("../../analysis_files/true_D.csv", sep=",", header=FALSE) )
+message("Reading ../../analysis_files/true_G.csv")
 true_g<-as.matrix(read.csv("../../analysis_files/true_G.csv", sep=",", header=FALSE) )
 
-#Vd1<-as.matrix(read.csv("../../analysis_files/D2.csv", sep=",", header=FALSE) )
-#Vd2<-as.matrix(read.csv("../../analysis_files/D4.csv", sep=",", header=FALSE) )
-#F<-as.matrix(read.csv("../../analysis_files/F.csv", sep=",", header=FALSE) )
-
+message("Reading ../../analysis_files/gctaA.csv")
 gctaA<-as.matrix(read.csv("../../analysis_files/gctaA.csv", sep=",", header=FALSE) )
+message("Reading ../../analysis_files/gctaD.csv")
 gctaD<-as.matrix(read.csv("../../analysis_files/gctaD.csv", sep=",", header=FALSE) )
+message("Reading ../../analysis_files/plinkA.csv")
 plinkA<-as.matrix(read.csv("../../analysis_files/plinkA.csv", sep=",", header=FALSE) )
 
-Vdelta<-VD[1:n,1:n]
+VD<-VD[1:n, 1:n]
 VA<-VA[1:n, 1:n]
 VG<-VG[1:n, 1:n]
+
 gctaA<-gctaA[1:n, 1:n]
 gctaD<-gctaD[1:n, 1:n]
-gctaA<-gctaA
+
 plinkA<-plinkA[1:n, 1:n]
 
-#Vdelta[is.na(Vdelta)] <- 0
-#VA[is.na(VA)] <- 0
-#VG[is.na(VG)] <- 0
-#VG[is.infinite(VG)] <- 0
+Vd<-Vd[1:n, 1:n]
+Va<-Va[1:n, 1:n]
+Vg<-Vg[1:n, 1:n]
 
-png("delta_vs_d.png")
+VD<-VD/mean(diag(VD))
+VA<-VA/mean(diag(VA))
+VG<-VG/mean(diag(VG))
+
+Va<-Va/mean(diag(Va))
+Vd<-Vd/mean(diag(Vd))
+Vg<-Vg/mean(diag(Vg))
+
+#png("mua_vs_z.png")
+#par(mar=MAR2, family=FONT, font.lab=2)
+#plot(as.vector(mua), as.vector(alpha), type='n', col=set_alpha(COLMAPGD, ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste( mu[alpha]) ),  ylab=expression(alpha) )
+#points(as.vector(mua), as.vector(alpha), pch=20, col=set_alpha(COLGCTA, ALPHAVALUE), lwd=2)
+#dev.off()
+
+#png("mud_vs_z.png")
+#par(mar=MAR2, family=FONT, font.lab=2)
+#plot(as.vector(mud), as.vector(delta), type='n', col=set_alpha(COLMAPGD, ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste( mu[delta]) ),  ylab=expression(delta) )
+#points(as.vector(mud), as.vector(delta), pch=20, col=set_alpha(COLGCTA, ALPHAVALUE), lwd=2)
+#dev.off()
+
+png("delta_vs_delta.png")
 par(mar=MAR2, family=FONT, font.lab=2)
-plot(as.vector(Vdelta), as.vector(true_d), type='n', ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col=set_alpha(COLMAPGD, ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(S), "(", bold(delta), ",", bold(delta), ")"[italic(ij)]) ),  ylab=expression(paste(S, "(", bold(delta), ",", bold(delta), ")"[italic(ij)] ) ) )
-points(as.vector(gctaD), as.vector(true_d), pch=20, col=set_alpha(COLGCTA, ALPHAVALUE), lwd=2)
-points(as.vector(Vdelta), as.vector(true_d), pch=20, col=set_alpha(COLMAPGD, ALPHAVALUE), lwd=2)
+plot(as.vector(true_d), as.vector(VD), type='n', ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col=set_alpha(COLMAPGD, ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(R, "(", bold(delta), ",", bold(delta), ")"[italic(ij)]) ),  ylab=expression(paste(hat(R), "(", bold(delta), ",", bold(delta), ")"[italic(ij)] ) ) )
 
-m<-rangemean(as.vector(true_d), as.vector(Vdelta), max(Vdelta)*100)
-points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
-m<-rangemean(as.vector(true_d), as.vector(gctaD), max(gctaD)*100)
-points(m[,1], m[,2], type='l', col=shade(COLGCTA, 0.5), lwd=2)
+Y<-c(as.vector(true_d), as.vector(true_d) )
+X<-c(as.vector(gctaD), as.vector(VD) ) 
+C<-c(rep(set_alpha(COLGCTA, ALPHAVALUE), N*N), rep(set_alpha(COLMAPGD, ALPHAVALUE), N*N) ) 
+P<-data.frame(Y, X, C)
+P2 <- P[sample(nrow(P)),]
+plot(P2$Y, P2$X, col=as.character(P2$C), pch=20)
+
+#points(as.vector(true_d), as.vector(gctaD), pch=20, col=set_alpha(COLGCTA, ALPHAVALUE), lwd=2)
+#points(as.vector(true_d), as.vector(VD), pch=20, col=set_alpha(COLMAPGD, ALPHAVALUE), lwd=2)
+
+if(CI)
+{
+	m<-rangestdev(as.vector(VD), as.vector(true_d), steps=50, max=2)
+	points(m[,1], m[,3], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
+	polygon(c(m[,1], rev(m[,1]), m[1,1] ), c(m[,3]+m[,2], rev(m[,3]-m[,2]), m[1,1] ), border = shade(COLMAPGD, 0.5), col=set_alpha(COLMAPGD, 0.5), lty = par("lty") )
+	m<-rangestdev(as.vector(gctaD), as.vector(true_d), steps=50, max=2)
+	points(m[,1], m[,3], type='l', col=shade(COLGCTA, 0.5), lwd=2)
+	polygon(c(m[,1], rev(m[,1]), m[1,1] ), c(m[,3]+m[,2], rev(m[,3]-m[,2]), m[1,1] ), border = shade(COLGCTA, 0.5), col=set_alpha(COLGCTA, 0.5), lty = par("lty") )
+}
 
 abline(0,1,lwd=2, col="black", lty=2)
 
 dev.off()
 
-png("gcta_vs_d.png")
+#NEXT
 
+if(GRAPH_AD)
+{
+png("gcta_vs_Va.png")
 par(mar=MAR2, family=FONT, font.lab=2)
-plot(as.vector(Vdelta), as.vector(gctaD), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col="black", pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste("D(", i, ",", j, ")") ),  ylab="gcta" ) 
+plot(as.vector(gctaA), as.vector(Va), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col=COLGCTA, pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste(hat(R),"(", M, ",", M, ")"[italic(ij)]) ),  xlab=expression(paste("gcta's ", beta) )  ) 
+abline(0,1,lwd=2, col="black", lty=2)
+dev.off()
+}
+
+png("gcta_vs_beta.png")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(as.vector(gctaA), as.vector(VA), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col=COLGCTA, pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste(hat(R),"(", beta, ",", beta, ")"[italic(ij)]) ),  xlab=expression(paste("gcta's ", beta) ) ) 
 abline(0,1,lwd=2, col="black", lty=2)
 dev.off()
 
-#png("d_vs_d.png")
-#par(mar=MAR2, family=FONT, font.lab=2)
-#plot(as.vector(Vd), as.vector(true_d), ylim=c(0,1.5), xlim=c(0,1.5), col=rgb(0,0,0,0.1), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste("S(", i, ",", j, ")") ),  ylab=expression(paste("cov[", delta[i], ",", delta[j], "]/var[", delta, "]" ) ) )
-#m<-rangemean(as.vector(true_d), as.vector(Vd), 100)
-#points(m[,1], m[,2], type='l', col=COL1, lwd=2)
-#abline(0,1, lwd=2, col="black", lty=2)
-#dev.off()
-
-#png("D_vs_d.png")
-#par(mar=MAR2, family=FONT, font.lab=2)
-#plot(as.vector(VD), as.vector(true_d), ylim=c(0,1.5), xlim=c(0,1.5), col=rgb(0,0,0,0.1), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste("B(", i, ",", j, ")") ),  ylab=expression(paste("corr(", delta[i], ",", delta[j], ")") ) )
-#m<-rangemean(as.vector(true_d), as.vector(VD), 100)
-#points(m[,1], m[,2], type='l', col=COL1, lwd=2)
-#abline(0,1, lwd=2, col="black", lty=2)
-#dev.off()
-
-png("a_vs_a.png")
+png("Va_vs_beta.png")
 par(mar=MAR2, family=FONT, font.lab=2)
-plot(as.vector(VA), as.vector(true_a), type='n', ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(S),"(", bold(beta), ",", bold(beta), ")"[italic(ij)] ) ),  ylab=expression(paste("Cov(", italic(beta)[italic(i)], ",", italic(beta)[italic(j)], ")/Var(", bold(beta), ")") ) )  
-points(as.vector(plinkA), as.vector(true_a), pch=20, col=set_alpha(COLPLINK,ALPHAVALUE) )
-points(as.vector(gctaA), as.vector(true_a), pch=20, col=set_alpha(COLGCTA,ALPHAVALUE) )
-points(as.vector(VA), as.vector(true_a), pch=20, col=set_alpha(COLMAPGD,ALPHAVALUE) )
-m<-rangemean(as.vector(true_a), as.vector(VA), 100)
-points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
-m<-rangemean(as.vector(true_a), as.vector(gctaA), 100)
-points(m[,1], m[,2], type='l', col=shade(COLGCTA, 0.5), lwd=2)
-m<-rangemean(as.vector(true_a), as.vector(plinkA), 100)
-points(m[,1], m[,2], type='l', col=shade(COLPLINK, 0.5), lwd=2)
-abline(0,1, lwd=2, col="black", lty=2)
+plot(as.vector(Va), as.vector(VA), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col="black", pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste(hat(R),"(", M, ",", M, ")"[italic(ij)]) ),  xlab=expression(paste(hat(R),"(", beta, ",", beta, ")"[italic(ij)] ) ) ) 
+abline(0,1,lwd=2, col="black", lty=2)
 dev.off()
 
-png("a_vs_a_zoom.png")
+png("Va_vs_beta_true.png")
 par(mar=MAR2, family=FONT, font.lab=2)
-plot(as.vector(VA), as.vector(true_a), type='n', ylim=c(-0.5,.5), xlim=c(-0.5,.5), cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(S),"(", bold(beta), ",", bold(beta), ")"[italic(ij)] ) ),  ylab=expression(paste("Cov(", italic(beta)[italic(i)], ",", italic(beta)[italic(j)], ")/Var(", bold(beta), ")") ) )  
-#points(as.vector(plinkA), as.vector(true_a), pch=20, col=set_alpha(COLPLINK,ALPHAVALUE) )
-#points(as.vector(gctaA), as.vector(true_a), pch=20, col=set_alpha(COLGCTA,ALPHAVALUE) )
-points(as.vector(VA), as.vector(true_a), pch=20, col=set_alpha(COLMAPGD,ALPHAVALUE) )
-m<-rangemean(as.vector(true_a), as.vector(VA), 200)
-#points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
-m<-rangemean(as.vector(true_a), as.vector(gctaA), 200)
-#points(m[,1], m[,2], type='l', col=shade(COLGCTA, 0.5), lwd=2)
-m<-rangemean(as.vector(true_a), as.vector(plinkA), 200)
-#points(m[,1], m[,2], type='l', col=shade(COLPLINK, 0.5), lwd=2)
-abline(0,1, lwd=2, col="black", lty=2)
+plot(as.vector(true_a), as.vector(true_a2), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col="black", pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste("R(", M, ",", M, ")"[italic(ij)]) ),  xlab=expression(paste("R(", beta, ",", beta, ")"[italic(ij)] ) ) ) 
+abline(0,1,lwd=2, col="black", lty=2)
 dev.off()
+
+png("Va_vs_beta2.png")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(as.vector(Va), as.vector(true_a2), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col="black", pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste(hat(R),"(", M, ",", M, ")"[italic(ij)]) ),  xlab=expression(paste("R(", beta, ",", beta, ")"[italic(ij)] ) ) ) 
+abline(0,1,lwd=2, col="black", lty=2)
+dev.off()
+
+png("Va_vs_beta2_true.png")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(as.vector(true_a), as.vector(VA), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col="black", pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste("R(", M, ",", M, ")"[italic(ij)]) ),  xlab=expression(paste(hat(R),"(", beta, ",", beta, ")"[italic(ij)] ) ) ) 
+abline(0,1,lwd=2, col="black", lty=2)
+dev.off()
+
+if(GRAPH_AD)
+{
+png("gcta_vs_Vd.png")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(as.vector(Vd), as.vector(gctaD), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col=COLGCTA, pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(R),"(", H, ",", H, ")"[italic(ij)]) ),  ylab=expression(paste("gcta's ", delta) )  ) 
+abline(0,1,lwd=2, col="black", lty=2)
+dev.off()
+
+png("gcta_vs_delta.png")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(as.vector(VD), as.vector(gctaD), ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), col=COLGCTA, pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(R),"(", delta, ",", delta, ")"[italic(ij)]) ),  ylab=expression(paste("gcta's ", delta) ) ) 
+abline(0,1,lwd=2, col="black", lty=2)
+dev.off()
+}
+
+if(GRAPH_AD)
+{
+png("G_vs_g.png")
+par(mar=MAR2, family=FONT, font.lab=2)
+plot(as.vector(Vg), as.vector(VG), col=COLMAPGD, pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste("R(", beta, ",", delta, ")"[italic(ij)]) ),  ylab=expression(paste("R(", M, ",", H, ")"[italic(ij)]) ) ) 
+abline(0,1,lwd=2, col="black", lty=2)
+dev.off()
+}
+
+png("beta_vs_beta.png")
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(true_a), as.vector(true_a), type='n', ylim=c(-0.5,1.5), xlim=c(-0.5,1.5), cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(R,"(", bold(beta), ",", bold(beta), ")"[italic(ij)] ) ),  ylab=expression(paste(hat(R),"(", bold(beta), ",", bold(beta), ")"[italic(ij)] ) ) ) 
+	rscatter_plot(true_a, gctaA, VA, col=c(COLGCTA, COLMAPGD) )
+	abline(0,1, lwd=2, col="black", lty=2)
+dev.off()
+
+png("beta_vs_beta_zoom.png")
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(true_a), as.vector(true_a), type='n', ylim=c(-0.25,.5), xlim=c(-0.25,.5), cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(R,"(", bold(beta), ",", bold(beta), ")"[italic(ij)] ) ),  ylab=expression(paste(hat(R),"(", bold(beta), ",", bold(beta), ")"[italic(ij)] ) ) ) 
+	rscatter_plot(true_a, gctaA, VA, col=c(COLGCTA, COLMAPGD), MAX=0.5 )
+	abline(0,1, lwd=2, col="black", lty=2)
+dev.off()
+
+png("gamma_vs_gamma.png")
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(true_g), as.vector(VG), xlim=c(-150,150), ylim=c(-150,150), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste(hat(R),"(", bold(beta), ",", bold(delta), ")"[italic(ij)] ) ),  xlab=expression(paste (R,"(", bold(beta), ",", bold(delta), ")"[italic(ij)] ) ) )
+	rscatter_plot(true_g, VG, col=c(COLMAPGD), MAX=150 )
+	abline(0,1, lwd=2, col="black", lty=2)
+dev.off()
+
+png("gamma_vs_gamma_zoom.png")
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(VG), as.vector(true_g), xlim=c(-5, 5), ylim=c(-5,5), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(R),"(", bold(beta), ",", bold(delta), ")"[italic(ij)] ) ),  ylab=expression(paste (R,"(", bold(beta), ",", bold(delta), ")"[italic(ij)] ) ) )
+	rscatter_plot(true_g, VG, col=c(COLMAPGD), MAX=5 )
+	abline(0,1, lwd=2, col="black", lty=2)
+dev.off()
+
+
+if(GRAPH_AD)
+{
+	png("a_vs_a.png")
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(Va), as.vector(true_a2), xlim=c(-1.5, 1.5), ylim=c(-1.5, 1.5), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(R),"(", bold(M), ",", bold(M), ")"[italic(ij)] ) ),  ylab=expression(paste (R,"(", bold(M), ",", bold(M), ")"[italic(ij)] ) ) )
+	rscatter_plot(true_a2, Va, col=c(COLMAPGD) )
+	abline(0,1, lwd=2, col="black", lty=2)
+dev.off()
+}
+
+
+if(GRAPH_AD)
+{
+	png("d_vs_d.png")
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(Vd), as.vector(true_d2), xlim=c(-1.5, 1.5), ylim=c(-1.5, 1.5), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(R),"(", bold(D), ",", bold(D), ")"[italic(ij)] ) ),  ylab=expression(paste (R,"(", bold(H), ",", bold(H), ")"[italic(ij)] ) ) )
+	rscatter_plot(true_d2, Vd, col=c(COLMAPGD) )
+	abline(0,1, lwd=2, col="black", lty=2)
+dev.off()
+}
+
+if(GRAPH_AD)
+{
+	png("g_vs_g_zoom.png")
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(true_g2), as.vector(Vg), xlim=c(-1.5, 1.5), ylim=c(-1.5, 1.5), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste(hat(R),"(", bold(M), ",", bold(H), ")"[italic(ij)] ) ),  xlab=expression(paste (R,"(", bold(M), ",", bold(H), ")"[italic(ij)] ) ) )
+	rscatter_plot(true_g2, Vg, col=c(COLMAPGD) )
+	abline(0,1, lwd=2, col="black", lty=2)
+	dev.off()
+}
+
 
 png("g_vs_g.png")
-par(mar=MAR2, family=FONT, font.lab=2)
-plot(as.vector(VG), as.vector(true_g), xlim=c(-150,150), ylim=c(-150,150), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(S),"(", bold(beta), ",", bold(delta), ")"[italic(ij)] ) ),  ylab=expression(paste("Cov(", bold(beta)[i], ",", bold(delta)[j], ")/Cov(", bold(beta), ", " , bold(delta), ")") ) )
-m<-rangemean(as.vector(true_g), as.vector(VG), 100)
-#points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
-abline(0,1, lwd=2, col="black", lty=2)
+	par(mar=MAR2, family=FONT, font.lab=2)
+	plot(as.vector(true_g2), as.vector(Vg), xlim=c(-25, 25), ylim=c(-25, 25), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, ylab=expression(paste(hat(R),"(", bold(M), ",", bold(H), ")"[italic(ij)] ) ),  xlab=expression(paste (R,"(", bold(M), ",", bold(H), ")"[italic(ij)] ) ) )
+	rscatter_plot(true_g2, Vg, col=c(COLMAPGD), MAX=25 )
+	abline(0,1, lwd=2, col="black", lty=2)
 dev.off()
 
-png("g_vs_g_zoom.png")
-par(mar=MAR2, family=FONT, font.lab=2)
-plot(as.vector(VG), as.vector(true_g), xlim=c(-5,5), ylim=c(-5,5), col=set_alpha(COLMAPGD,ALPHAVALUE), pch=20, cex.lab=LABSIZE, cex.axis = AXISSIZE, xlab=expression(paste(hat(S),"(", bold(beta), ",", bold(delta), ")"[italic(ij)] ) ),  ylab=expression(paste("Cov(", bold(beta)[i], ",", bold(delta)[j], ")/Cov(", bold(beta), ", " , bold(delta), ")") ) )
-m<-rangemean(as.vector(true_g), as.vector(VG), 100)
-#points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
-abline(0,1, lwd=2, col="black", lty=2)
-dev.off()
-
-library(regress)
-
-n<-N
-
-z<-as.matrix(alpha[1:n]+delta[1:n], ncol=n, nrow=1)
-#z<-z/sd(as.vector(z) )
-#r<-regress(z~1, ~VA+VG+Vdelta)
-
-sA<-var(alpha)#r$sigma[1]
-sD<-var(delta)#r$sigma[3]
-sAD<-cov(alpha, delta )#r$sigma[2]
-
-#sA+sD+2*sAD=var(z)
-
-library(expm)
-
-g<-a+d
-
-V1<- ( t(g) %*% g )*4
-
-#V1[abs(V1) > 0.2] <- 0
-
-#*3199
-#* 3199 #sA*VA+sD*Vdelta#-sAD*VG
-z_hat<-c()
-
-#n<-40
-z<-z[1:n]
-
-V1<-V1[1:n, 1:n]
-#+diag(n)/10
-
-for (x in 1:n)
-{
-#	u=V1[x,]
-#	tz<-z[-x]-mean(z[-x])
-#	tz<-tz/sd(tz)
-#	z_hat<- #c(z_hat, t(tz) %*% solve(V1[-x,-x]) %*% u[-x] )
-}
-#plot(z_hat, z, pch=20,  cex.lab=LABSIZE, cex.axis = AXISSIZE, col=COLMAPGD,  xlab=expression(paste("Estimated phenotype") ),  ylab=expression(paste("True phenotype") ) ) 
-
-#r<-regress(z~1, ~gctaA+gctaD)
-#sA<-r$sigma[1]
-#sD<-r$sigma[2]
-#sAD<-r$sigma[3]
-
-V2<-sA*gctaA[1:n, 1:n]+sD*gctaD[1:n, 1:n]
-z_hat2<-c()
-for (x in 1:n)
-{
-	u=V2[x,]
-	tz<-z[-x]-mean(z[-x])
-	tz<-tz/sd(tz)
-	z_hat2<-c(z_hat2, t(tz) %*% solve(V2[-x,-x]) %*% u[-x] )
-}
-
-png("z_vs_z_hat.png")
-par(mar=MAR2, family=FONT, font.lab=2)
-plot(z_hat, z, pch=20,  cex.lab=LABSIZE, cex.axis = AXISSIZE, col=COLMAPGD,  xlab=expression(paste("Estimated phenotype") ),  ylab=expression(paste("True phenotype") ) ) 
-points(z_hat2, z, pch=20, col=COLGCTA)
-
-m<-rangemean(as.vector(z), as.vector(z_hat), 100)
-points(m[,1], m[,2], type='l', col=shade(COLMAPGD, 0.5), lwd=2)
-m<-rangemean(as.vector(z), as.vector(z_hat2), 100)
-points(m[,1], m[,2], type='l', col=shade(COLGCTA, 0.5), lwd=2)
-
-abline(0,1,lwd=2, col="black", lty=2)
-dev.off()
-print(summary(lm(z ~ z_hat +0)))
-print(summary(lm(z ~ z_hat2+0)))

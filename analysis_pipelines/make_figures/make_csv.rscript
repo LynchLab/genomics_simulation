@@ -1,0 +1,27 @@
+library(MASS)
+library(mvtnorm)
+PYPATH<-"../python_utilities/"
+DATAFILE<-"../../analysis_files/mapgd_relatedness.out"
+PHENOFILE="../../analysis_files/t_final.txt"
+COVFILE="../../analysis_files/cov.txt"
+
+MAPGDR<-"~/src/genomics_simulation/analysis_pipelines/mapgdr/"
+ 
+source(paste(MAPGDR, "dmvnorm_reduce.rscript", sep="") )
+
+CALC<-TRUE
+
+t<-head(read.csv(PHENOFILE, sep="	", skip=1), -1) 
+
+N<-dim(t)[1]
+n<-N
+
+if(CALC)
+{
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_A2.py ", N, " ", n, " > ../../analysis_files/A.csv", sep="" ) )
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_D2.py ", N, " ", n, " > ../../analysis_files/D.csv", sep="" ) )
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_G2.py ", N, " ", n, " > ../../analysis_files/G.csv", sep="" ) )
+
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_mua.py ", N, " ", n, " > ../../analysis_files/mua.csv", sep="" ) )
+	system(paste("cat ", DATAFILE, " | python-2.7.9 ", PYPATH, "make_mud.py ", N, " ", n, " > ../../analysis_files/mud.csv", sep="" ) )
+}

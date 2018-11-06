@@ -51,9 +51,9 @@ A=v[0:N, 0:N]
 D=v[N:,N:]
 G=v[0:N,N:]+v[N:,0:N]
 
-A=A/numpy.mean(numpy.diag(A))
-D=D/numpy.mean(numpy.diag(D))
-G=G/numpy.mean(numpy.diag(G))
+#A=A/numpy.mean(numpy.diag(A))
+#D=D/numpy.mean(numpy.diag(D))
+#G=G/numpy.mean(numpy.diag(G))
 
 #A=A.tolist()
 

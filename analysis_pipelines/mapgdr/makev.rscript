@@ -1,0 +1,5 @@
+makev <- function(m) {
+	I<-diag(m)
+	J<-matrix( rep(1, m^2), ncol=m, nrow=m)
+	m/(m*(m-1))*I-1/((m-1)*m)*J
+}

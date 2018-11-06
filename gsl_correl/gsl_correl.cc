@@ -2,18 +2,28 @@
 #include "map_file.h"
 #include "state.h"
 #include "sample_name.h"
-#include "correl_data.h"
+#include "relatedness_data.h"
+#include "system.h"
 
 #include <cstring>
 #include <sstream>
 #include <tuple>
 #include <map>
 #include <fstream>
+#include <ctime>
+#include <omp.h>
+
+#include "matrix.h"
+#include "types.h"
 
 #include "Eigen/Core"
 
 #define UINT uint32_t
 #define WORD 32
+
+//#define BLOCK 4096
+#define BLOCK 1024
+//#define BLOCK 32
 
 static UINT Mask[WORD]={0x00000001, 0x00000002, 0x00000004, 0x00000008,
 			0x00000010, 0x00000020, 0x00000040, 0x00000080,
@@ -82,9 +92,17 @@ inline void transposed_het_sumN(const UINT *place, const UINT &N, UINT *sum)
 
 int main (int argc, char **argv){
 
+	std::cerr << __FILE__ << std::endl;
+
 	std::string names_file="", input_file="";
 	int indX=-1, indY=-1, model=0;
 	std::string namex="", namey="";
+
+	int a=0;
+	int b=0;
+
+	bool sub_matrix=false;
+	bool binary=false;
 
 	Environment env;
 	env.set_name("call_relatedness");
@@ -96,9 +114,17 @@ int main (int argc, char **argv){
 	env.optional_arg('y',"namex",  namey,      "please provide a number.", "number of individuals in the populations.");
 	env.optional_arg('m',"model",  model,      "please provide a number.", "model of the DoGE to use.");
 	env.optional_arg('i',"input",  input_file,      "please provide a number.", "number of individuals in the populations.");
-	env.positional_arg('n',"names",  names_file,      "please provide a number.", "number of individuals in the populations.");
+	env.positional_arg('n',"names",  names_file,      "please provide a number.", "names of individuals in the populations.");
+	env.optional_arg('A',"parta",  a,      "please provide a number.", "number of individuals in the populations.");
+	env.optional_arg('B',"partb",  b,      "please provide a number.", "number of individuals in the populations.");
+	env.flag(       'b',"binary",   &binary,        &flag_set,      "an error occurred while displaying the version message", "binary output");             //DONE
+
 
 	if ( parsargs(argc, argv, env) != 0 ) print_usage(env);
+
+	//Eigen::initParallel();
+	Eigen::setNbThreads(4);
+	std::cerr << "using " << Eigen::nbThreads( ) << " threads.\n";
 
 	State Pstates;
  	{
@@ -114,134 +140,255 @@ int main (int argc, char **argv){
 		Pstates=state_file.read_header();
 		state_file.read(Pstates);
 		state_file.close();
-		std::cerr << Pstates.sample_size() << ", " << Pstates.genome_size() << std::endl;
+		std::cerr << "Sample: " << Pstates.sample_size() << ", " << " genome: "<<  Pstates.genome_size() << std::endl;
 	}
 
-	int N(Pstates.sample_size());
-	int LEN(Pstates.genome_size()*32);
-	
-	Eigen::MatrixXf G(LEN, N*2);
+	std::cerr << "allocating matrices..." << std::endl;
 
-	UINT *dm=new UINT[N];
-	UINT p_arr[WORD];
-	UINT h_arr[WORD];
-
-	float a=1, d=-1;
-
-	switch (model)
+	int N=Pstates.sample_size();
+	int n=N;
+	if(sub_matrix)
 	{
-		case 0:
-			a=1;
-			d=0;
-		break;
-		case 1:
-			a=1;
-			d=1;
-		break;
-		case 2:
-			a=1;
-			d=-1;
-		break;
-		case 3:
-			a=-1;
-			d=0;
-		break;
-		case 4:
-			a=-1;
-			d=1;
-		break;
-		case 5:
-			a=-1;
-			d=-1;
-		break;
-	}	
+		n=n/2;
+	}
+	int LEN=Pstates.genome_size()*32;
 
-	size_t l=0;
+			  //		      MtM, MtH, HtH`
+	size_t mem_needed =5*n*sizeof(double)+3*n*n*sizeof(double)+2*n*2*sizeof(uint32_t) + 3*BLOCK*n*sizeof(double)+3*BLOCK*sizeof(double)+Pstates.buffer_size();
+	std::cerr << 5*n*sizeof(double) << std::endl;  
+	std::cerr << 3*n*n*sizeof(double) << std::endl; //big
+	std::cerr << 2*n*2*sizeof(uint32_t) << std::endl; 
+	std::cerr << 3*BLOCK*n*sizeof(double) << std::endl; //big
+	std::cerr << 3*BLOCK*sizeof(double) << std::endl;
+	std::cerr << Pstates.buffer_size() << std::endl; //big
+	size_t mem_avail = system_memory();
+	std::cerr << "Total memory needed:" << mem_needed << "(" << float(mem_needed)/float(mem_avail) << ") of " << mem_avail << std::endl;
+	if (mem_needed > mem_avail) 
+	{
+		std::cerr << "not enough memory" << std::endl;
+	}
 
-	UINT *P=new uint32_t [N*2];
-	UINT *P2=P+N;
+
+	VECTOR s1=ARRAY1::Zero(n);
+	VECTOR s2=ARRAY1::Zero(n);
+	VECTOR ll=ARRAY1::Zero(n);
+
+	VECTOR fs(N);
+	VECTOR dm(N);
+
+	MATRIX S4=ARRAY2::Zero(n, n);
+	MATRIX S5=ARRAY2::Zero(n, n);
+	MATRIX S6=ARRAY2::Zero(n, n);
+
+	UINT p_arr[WORD];
+
+	UINT *P1=new uint32_t [N*2];
+	UINT *P2=P1+N;
+
+	UINT *N1=new uint32_t [N*2];
+	UINT *N2=N1+N;
+
+	MATRIX M(BLOCK,N), H(BLOCK,N), Q=MATRIX::Constant(BLOCK, N, 1);
+	VECTOR EM(BLOCK), EH(BLOCK), EQ(BLOCK), F(BLOCK), PQ(BLOCK);
+
+
+	double f=0, pq=0;
+
+	clock_t t1, t2, t3, s;
+	size_t K=0;
+	s=clock();
 
 	while (!Pstates.empty())
-	{	
-		Pstates.uncompress(P, P2);
+	{
+
+		Pstates.uncompress(P1, P2, N1, N2);
+
 		memset(p_arr, 0, sizeof(UINT)*WORD);
-		memset(h_arr, 0, sizeof(UINT)*WORD);
-		transposed_bit_sumN(P, 2*N, p_arr);
-		transposed_het_sumN(P, N, h_arr);
+
+		transposed_bit_sumN(P1, 2*N, p_arr);
+	
 		for (size_t k=0; k<WORD; k++)
 		{
-			float p=float(p_arr[k])/float(2*N);
-			//std::cerr << p_arr[k] << std::endl;
+			double p=double(p_arr[k])/double(2*N);
 			if (p>0 and p<1)
 			{
-				float q=1.-p;
-	
-				for (size_t x=0; x<N; x++)
-					dm[x]=( (P[x] & (1 << k) ) !=0)+( (P2[x] & (1<<k) ) !=0);
-	
-				float D=2.*p*q-float(h_arr[k])/float(N);
-				float alpha=a+d*(q-p);
-	
-				float this_beta[3]={-p*2.*alpha,(q-p)*alpha,2.*q*alpha};
-				float this_delta[3]={d*(-2*p*p+D),d*(2*p*q+D), d*(-2*q*q+D) };
- 		 
+				{
 				for (size_t x=0; x<N; x++)
 				{
-					G(l,x)=this_beta[dm[x]];
-					G(l,N+x)=this_delta[dm[x]];
+					Q(K,x)=( (N1[x] & (1 << k) !=0 ) & (N2[x] & (1<<k) != 0 ) );
+					if ( Q(K,x) )
+					{
+						M(K,x)=( (P1[x] & (1<<k) ) !=0)+( (P2[x] & (1 << k) ) !=0);
+						H(K,x)=( (P1[x] & (1 << k) )!=(P2[x] & (1<<k) ) );
+					} else {
+						M(K,x)=0;
+						H(K,x)=0;
+					}
 				}
-				l++;
+				if  ( 2*Q.block(K,0,1,N).sum()!=M.block(K,0,1,N).sum() ) K++;
+				}
+				if(K==BLOCK)
+				{
+					EQ = Q.rowwise().sum();
+
+					EH = H.rowwise().sum().array() / EQ.array();
+					EM = M.rowwise().sum().array() / EQ.array();
+
+					PQ = (EM.array()/2.)*(1.-EM.array()/2. );
+					F = ( 1.-EH.array()/(2.*(PQ.array() ) ) );
+
+					/*
+					for (int x=0; x<50; x++)
+					{
+					std::cerr << 2*Q.block(x,0,1,N).sum() << "/" << M.block(x,0,1,N).sum() << ":";
+					std::cerr << EH(x,0) << ", ";
+					std::cerr << EM(x,0) << ", ";
+					std::cerr << PQ(x,0) << ", ";
+					std::cerr << F(x,0) << std::endl ;
+					}
+					*/
+
+					f += F.sum();
+					pq += BLOCK; 
+
+					//PQ.sum();
+					//EH = (H.rowwise().sum() );
+					//EM = (M.rowwise().sum() );
+
+					M = center(M, EM).cwiseProduct(Q);
+					H = center(H, EH).cwiseProduct(Q);
+
+					if (sub_matrix){
+						MATRIX M1=M.block(0, a*n, BLOCK, n);
+						MATRIX M2=M.block(0, b*n, BLOCK, n);
+						MATRIX H1=H.block(0, a*n, BLOCK, n);
+						MATRIX H2=H.block(0, b*n, BLOCK, n);
+
+						S4 += ( t(H1)*M2+t(M1)*H2 );
+						S5 += 2.*( t(M1)*M2 );
+						S6 += 2.*( t(H1)*H2 );
+					} else {
+						S4 += ( t(H)*M+t(M)*H );
+						S5 += 2.*( t(M)*M );
+						S6 += 2.*( t(H)*H );
+					}
+
+
+					K=0;
+	
+					if (sub_matrix)
+					{
+						s1+=M.block(0,a*n,BLOCK,n).colwise().sum();
+						s2+=H.block(0,a*n,BLOCK,n).colwise().sum();
+						ll+=Q.block(0,a*n,BLOCK,n).colwise().sum();
+					}  else {
+						s1+=M.colwise().sum();
+						s2+=H.colwise().sum();
+						ll+=Q.colwise().sum();
+					}
+					t2=clock();
+					std::cerr << BLOCK << ", t1:" << float(BLOCK)/float(t2-t3) << ", t2:" << float(t2-t3) << ", F=" << f/pq << std::endl;
+					t3=clock();
+				}
 			}
 		}
-		//std::cerr << "read " << std::endl;
+		//if(Pstates.genome_size() < 1000) break;
 	}
-	delete [] dm;
 
-	//std::cerr << G << std::endl << std::endl;
-
-	G.conservativeResize(l,N*2);
-	
-	//std::cerr << G << std::endl << std::endl;
-
-	Eigen::MatrixXf cov=G.transpose() * G;
-	//std::cerr << cov << std::endl << std::endl;
-	Eigen::MatrixXf A=cov.block(0, 0, N, N);
-	//std::cerr << A << std::endl << std::endl;
-	Eigen::MatrixXf D=cov.block(N,N,N,N);
-	Eigen::MatrixXf AD=cov.block(0,N,N,N)+cov.block(N,0,N,N);
-
-	/*
-	std::cout << G << std::endl;
-	std::cout << std::endl;
-	std::cout << cov << std::endl;
-	std::cout << std::endl;
-	std::cout << N*A/A.trace() << std::endl;
-	std::cout << std::endl;
-	std::cout << N*D/D.trace() << std::endl;
-	std::cout << std::endl;
-	std::cout << N*AD/AD.trace() << std::endl;
-	*/
-	Eigen::MatrixXf NormA=N*A/A.trace();
-	Eigen::MatrixXf NormD=N*D/D.trace();
-	Eigen::MatrixXf NormAD=N*AD/AD.trace();
-
-
-	std::cout << "@NAME:CORREL	VERSION:0.0	FORMAT:TEXT	CONCATENATED\n";
-	std::cout << "@SAMPLE_X	SAMPLE_Y	BETA_XY	DELTA_XY	GAMMA_XY\n";
-
-	for (size_t x=0; x<N; x++)
+	if(K!=0)
 	{
-		for (size_t y=x; y<N; y++)
+		std::cerr << K << std::endl;
+		MATRIX tM=M.block(0,0,K,N);
+		MATRIX tH=H.block(0,0,K,N);
+		MATRIX tQ=Q.block(0,0,K,N);
+
+		M=tM;
+		H=tH;
+		Q=tQ;
+
+		EQ = Q.rowwise().sum();
+		EH = EQ.asDiagonal().inverse() * (H.rowwise().sum() );
+		EM = EQ.asDiagonal().inverse() * (M.rowwise().sum() );
+
+		M=center(M, EM).cwiseProduct(Q);
+		H=center(H, EH).cwiseProduct(Q);
+
+		if (sub_matrix){
+			MATRIX M1=M.block(0, a*n, K, n);
+			MATRIX M2=M.block(0, b*n, K, n);
+			MATRIX H1=H.block(0, a*n, K, n);
+			MATRIX H2=H.block(0, b*n, K, n);
+
+			S4 += ( t(H1)*M2+t(M1)*H2 );
+			S5 += ( 2.*t(M1)*M2 );
+			S6 += ( 2.*t(H1)*H2 );
+		} else {
+			S4 += ( t(H)*M+t(M)*H );
+			S5 += ( 2.*t(M)*M );
+			S6 += ( 2.*t(H)*H );
+		}
+
+		K=0;
+
+		if (sub_matrix)
 		{
-			std::cout << x << "\t" << y << "\t" << NormA(x,y) << "\t" << NormD(x,y) << "\t" << NormAD(x,y) << std::endl;
+			s1+=M.block(0,a*n,BLOCK,n).colwise().sum();
+			s2+=H.block(0,a*n,BLOCK,n).colwise().sum();
+			ll+=Q.block(0,a*n,BLOCK,n).colwise().sum();
+		} else {
+			s1+=M.colwise().sum();
+			s2+=H.colwise().sum();
+			ll+=Q.colwise().sum();
 		}
 	}
-	std::cout << "@END_TABLE\n";
-/*	
-	COV=tG*G;
-	matrix A=COV.block();
-	D=COV.block();
-	AD=COV.block();
-*/
-	//close();
+	
+	M.resize(0,0);
+	H.resize(0,0);
+	Q.resize(0,0);
+
+	//double S5T=(S5.trace()-(s1*t(s1) ).trace() )/double(N);
+	//double S6T=(S6.trace()-(s2*t(s2) ).trace() )/double(N);
+
+	Relatedness rel(n);
+	Flat_file <Relatedness> rel_out;
+
+	if (binary)
+		rel_out.open(WRITE | BINARY );
+	else
+		rel_out.open(WRITE);
+
+	VECTOR l1=ll;
+	MATRIX denom = ll*t(ll);
+
+	for (int x=0; x<N; x++)	
+	{
+		for (int y=x; y<N; y++)	
+		{
+			float t=std::min(ll(x), ll(y) );
+			std::cerr << x << "t:" << t << std::endl;
+			denom(x,y) = 1./(2.*(N-1) ); //t / (2.*(t-1.) );
+			denom(y,x) = 1./(2.*(N-1) ); //t / (2.*(t-1.) );
+		}
+	}
+
+	for (int x=0; x<N; x++)	
+	{
+		std::cerr << "Meep Meep:" << x << ":" << l1(x) << std::endl;
+		l1(x) =  1./ sqrt( 2*(N-1)*l1(x) ); // sqrt(N);// l1(x) ;
+	}
+
+	std::cerr << "ll=" << ll.mean() << ", l1=" << l1.mean() << ", F=" << f/pq << std::endl;
+
+	rel.MtH = S4.cwiseProduct(denom);
+	rel.MtM = S5.cwiseProduct(denom);
+	rel.HtH = S6.cwiseProduct(denom);
+
+	rel.Mt1 = s1.cwiseProduct(l1);
+	rel.Ht1 = s2.cwiseProduct(l1);
+
+	rel.set_mean_sites(ll.mean() );
+	
+	rel_out.write_header(rel);
+	rel_out.write(rel);
+	rel_out.close();
 }

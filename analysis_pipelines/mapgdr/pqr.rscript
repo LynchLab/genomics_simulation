@@ -1,0 +1,64 @@
+#source("makev.rscript")
+
+p <- function(A, B) {
+	l<-dim(A)[1]
+	n<-dim(A)[2]
+	C<-makev(l)
+	( t(A) %*% B + t(B) %*% A ) /  (sqrt(mean(diag(t(A) %*% C %*% A) ) )*sqrt(mean(diag(t(B) %*% C %*% B) ) ) ) / ( 2*(n-1) )
+}
+
+p2 <- function(A, B) {
+	n<-dim(A)[2]
+	( t(A) %*% B + t(B) %*% A ) /  ( 2*(n-1) )
+}
+
+q <- function(A) {
+	l<-dim(A)[1]
+	n<-dim(A)[2]
+	j<-matrix( rep(1, l) , ncol=1, nrow=l)
+	C<-makev(l)
+	1/( (sqrt(mean(diag(t(A) %*% C %*% A) ) ) ) * sqrt(2.* (n - 1) ) ) * t(A) %*% j / sqrt(l) 
+}
+
+q2 <- function(A) {
+	l<-dim(A)[1]
+	n<-dim(A)[2]
+	j<-matrix( rep(1, l) , ncol=1, nrow=l)
+	1./( sqrt(2.* (n - 1) ) ) * t(A) %*% j / sqrt(l) 
+}
+
+r <- function(A, B) {
+	p(A, B)-q(A) %*% t(q(B))-q(B) %*% t(q(A))
+}
+
+r2  <- function(A,B)
+{
+	N<-dim(A)[1]
+	C<-makev(N)
+	(t(A) %*% C %*% B ) / sqrt(mean( diag( t(A)%*%C %*% A ) ) )/sqrt(mean(diag( t(B) %*% C %*% B ) ) ) 
+}
+
+r3 <- function(A,B,sab,ma,mb)
+{
+	sab^2*p(A,B)-(sab^2*ma*mb/(sab^2+ma*mb) )*( q(A) %*% t(q(B))-q(B) %*% t(q(A)) )
+}
+
+center <- function(A)
+{
+	N<-dim(A)[2]
+	j<-matrix( rep(1, N), ncol=1, nrow=N)
+	A-( (A %*% j)/N ) %*% t(j)
+}
+
+random_matrix <- function(a,b)
+{
+	A<-matrix( sample(0:2, a*b, replace=T), ncol=b, nrow=a)
+	A<-center(A)
+}
+
+random_diag <- function(a,b,c)
+{
+	D<-diag( rnorm(a,b,c) )
+}
+
+

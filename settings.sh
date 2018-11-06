@@ -1,7 +1,7 @@
 POPULATION=1200
 POP2=$((POPULATION/2))
 
-SAMPLE=1200
+SAMPLE=300
 SAMP=`seq 0 1 $((POPULATION-1)) | shuf | head -$SAMPLE`
 
 for s in $SAMP

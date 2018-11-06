@@ -9,8 +9,12 @@
 #include <vector>
 #include <sstream>
 
+#include "Eigen/Core"
+
 #include "typedef.h"
 #include "data.h"
+#include "stream_tools.h"
+#include "matrix.h"
 
 #define E_LIM 25
 
@@ -23,47 +27,61 @@ private:
 	static Data * create(const std::vector <std::string> & Columns){
 		return new Relatedness(Columns);
 	}
+	bool sub_set_;
+	bool tr_;
+	size_t a_, b_;
+	size_t n_;
+	
+	real_t mean_sites_analyzed_;
+	real_t sd_sites_analyzed_;
+
+
 public:
 	char delim;	//!< the delimiter used when reading/writing the class in text mode.	
 
-//	std::string X_;	//!< the name of the first (X) sample in the compairison.
-//	std::string Y_;	//!< the name of the second (Y) sample in the compairison.
+//	std::string X_;	//!< the name of the first (X) sample in the comparison.
+//	std::string Y_;	//!< the name of the second (Y) sample in the comparison.
 
-	id0_t X_, Y_;
+	id0_t _X, _Y;
+	size_t _N;
 
+	std::vector <std::string> sample_name;
 	id1_t sites;	//!< the number of sites analyzed.
 
-	float_t e_X_[E_LIM], e_X_ll;
-	float_t e_Y_[E_LIM], e_Y_ll;
+	VECTOR Mt1;		//!< transpose(M) * 1
+	VECTOR Ht1;
+
+	VECTOR rMt1;
+	VECTOR rHt1;
+	VECTOR lMt1;
+	VECTOR lHt1;
+
+	MATRIX MtM;		//!< transpose(M)*M
+	MATRIX MtH;
+	MATRIX HtH;
+
+	MATRIX MJM;		//!< M*J*M
+	MATRIX MJH;
+	MATRIX HJH;		
+
+	MATRIX tr;		//!< traces of MtM, HtH, etc..
+
+	//Higher order interactions...
+
+	//TODO Vector of descriptors ..?? 
 	/*
-	 * See ?
-	 */
-	float_t f_X_, f_X_ll;
-	float_t f_Y_, f_Y_ll;
-	float_t theta_XY_, theta_XY_ll;
-	float_t gamma_XY_, gamma_XY_ll;
-	float_t gamma_YX_, gamma_YX_ll;
-	float_t delta_XY_, delta_XY_ll;
-	float_t Delta_XY_, Delta_XY_ll;
-	float_t null_ll_, max_ll_;
+	VECTOR Xt1;
+	MATRIX XtX(N,N);
+	*/
 
 	Relatedness();	
-	//! delegating a neccisary constructor.	
-	Relatedness(const std::vector <std::string> &) : Relatedness(){}; 
-	//! construct with names. 
-	Relatedness(const std::string &, const std::string &);		  
+	Relatedness(const std::vector <std::string> &); 
+	Relatedness(const size_t &); 
 
 	//! The header line of plain text files. 
 	std::string header(void) const;
 	//! Size in bytes for binary read/write. 
 	size_t size(void) const;
-
-	//! Sets the name of the X sample. 
-	void set_X_name(const std::string &);
-	void set_X_name(const id0_t &);
-	//! Sets the name of the Y sample. 
-	void set_Y_name(const std::string &);
-	void set_Y_name(const id0_t &);
 
 	//! zeros statistics and sets names to empty.
 	void clear(void); 
@@ -79,6 +97,21 @@ public:
 	static const bool binary;
 
 	const bool get_binary() const;
+
+	const size_t sample_size(void) const;
+	
+	inline void set_mean_sites(const real_t &s){mean_sites_analyzed_=s;};
+	inline void set_std_sites(const real_t &s){sd_sites_analyzed_=s;};
+
+	inline const real_t& mean_sites(void) const {return mean_sites_analyzed_;};
+	inline const real_t& std_sites(void) const {return sd_sites_analyzed_;};
+
+	void make_outer_prod(void);
+	void make_trace(void);
+
+	Relatedness block(const int &, const int &, const int &, const int &) const;
+
+	void drop_missing(const Eigen::Matrix<int, Eigen::Dynamic, 1> &);
 
 	Relatedness& operator=(const Relatedness &rhs);
 };

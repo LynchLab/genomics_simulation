@@ -27,7 +27,8 @@ states=[]
 os.system("echo \" PRAGMA synchronous=OFF;\" | sqlite3 poly.db")
 
 for line in state_file:
-	states.append( line[1:]  ) 
+	if line[0]!='@':
+		states.append( line[1:]  ) 
 X=0
 inserts=[]
 for line in mutat_file:
@@ -39,9 +40,9 @@ for line in mutat_file:
 		inserts=[]
 		X=0
 	for n in range (0, N):
-		if state[n*4]=='1':
+		if state[n*4][0]=='1':
 			inserts.append([n*2+0, line])
-		if state[n*4+2]=='1':
+		if state[n*4+2][0]=='1':
 			inserts.append([n*2+1, line])
 	X=X+1
 cur.executemany("INSERT INTO snps VALUES (?, ?);", inserts )

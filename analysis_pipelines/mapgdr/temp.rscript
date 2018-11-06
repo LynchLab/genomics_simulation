@@ -1,0 +1,96 @@
+library(mvtnorm)
+
+ma  <- runif(1, 0, 1)
+sa  <- runif(1, 0, 1)
+md  <- runif(1, 0, 1)
+sd  <- runif(1, 0, 1)
+sad <- runif(1, -1, 1)*sqrt(sa^2*sd^2)
+se  <- 0
+
+ma  <- (-0.25)
+sa  <- 1
+md  <- (-0.25)
+sd  <- 1
+sad <- (-0.25)
+se  <- 0.5
+
+source("makev.rscript")
+source("makev2.rscript")
+source("makej.rscript")
+source("pqr.rscript")
+source("readmap.rscript")
+
+t  <- readmap("../../sequences/states.txt") #matrix(sample(0:2, l*n, replace=TRUE), ncol=n, nrow=l)
+M  <- t$M
+H  <- t$H
+
+l<-dim(M)[1]
+n<-dim(H)[2]
+
+V  <- makev(l)
+Va <- makev2(l, ma, sa )
+Vd <- makev2(l, md, sd )
+
+j <- makej(n)
+M <- (M-(M %*% j %*% t(j) )/n)
+H <- (H-(H %*% j %*% t(j) )/n)
+
+R <- 1000
+
+Z <- matrix(rep(0, n*R), ncol=n, nrow=R)
+
+a = mean(diag(p(M,M) ) )
+b = mean(diag(2*q(M) %*% t(q(M) ) ) )
+c = mean(diag(p(H,H) ) )
+d = mean(diag(2*q(H) %*% t(q(H) ) ) )
+e=2*mean(diag(p(M,H) ) )
+f=2*mean(diag(2*q(M) %*% t(q(H) ) ) )
+
+g=sqrt(mean(diag(var(M, M) ) ) )
+h=sqrt(mean(diag(var(H, H) ) ) )
+
+S1 <- g^2*( (sa^2)*p(M,M)-( (sa^2*ma^2)/(sa^2+ma^2) )*2*q(M) %*% t(q(M) ) ) + h^2*( (sd^2)*p(H,H)-( (sd^2*md^2)/(sd^2+md^2) )*2*q(H) %*% t(q(H) ) ) + g*h*2*(sad*(p(H,M)+p(M,H))/2.-(sad*ma*md)/(sad+ma*md)*( q(H) %*% t(q(M))+q(M) %*% t(q(H)) ) ) 
+dg <- mean( diag(S1) )
+SE <- -se/(se-1)*dg
+S  <- S1+SE*makev(n)*n
+
+Sa <- diag(l)
+Sd <- diag(l)
+
+message( (2*sum(l*diag(S))-sum(l*S) )/(n-1) )
+for (i in 1:R)
+{
+MU <- matrix( c(ma, md), nrow=2, ncol=1)
+SIGMA <- matrix( c(sa^2, sad, sad, sd^2), nrow=2, ncol=2) 
+DOGE  <- rmvnorm(l, MU, SIGMA)
+e <- rnorm(n, 0, sqrt(SE*l) )
+
+#diag(Sa) <- DOGE[,1]
+#diag(Sd) <- DOGE[,2]
+#A <- Sa %*% M
+#D <- Sd %*% H
+
+A <- sweep(M,MARGIN=1, DOGE[,1],`*`)
+D <- sweep(H,MARGIN=1, DOGE[,2],`*`)
+
+G <- A + D
+j <- makej(l)
+z <- t(G) %*% j + e
+VA=var(t(A) %*% j)
+VD=var(t(D) %*% j)
+VG=cov(t(D) %*% j, t(A) %*% j)
+VZ=var(z)
+message (var(z))
+Z[i,] <- t(z)
+message(i, ", ", VA/VZ, ", ", VD/VZ, ", ", VG/VZ)
+}
+
+V <- makev(R)
+
+ZVZ <- (t(Z) %*% V %*% Z)
+
+dZVZ <- ZVZ/mean(diag(ZVZ))
+
+V <- makev(l)
+
+dS <- S/mean(diag(S) ) 

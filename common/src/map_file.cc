@@ -274,12 +274,11 @@ void Base_file::close_table(void){
 
 void Base_file::close(void)
 {
-	if (table_open_){
+	if (table_open_)
 		close_table();
-	}
-	if ( file_.is_open() ) {
+	if ( file_.is_open() ) 
 		file_.close();
-	}
+	std::cerr << "is open: " << file_.is_open() << std::endl;
 	open_=false;
 }
 

@@ -18,14 +18,20 @@ State::State ()
 	sites_=0;
 	size_=0;
 	cached_sites_=false;
+	streaming_=false;
 }
 
 void
 State::set_stream(State_stream &stream) const
 {
+	std::cerr << "Setting stream : " << sites_ << std::endl;
 	stream.sites_=sites_;
 	stream.size_=size_;
-	if (cached_) stream.lz4_ptr=lz4_start_;
+	if (cached_) 
+	{
+		stream.lz4_ptr=lz4_start_;
+		stream.cached_sites_=cached_sites_;
+	}
 }
 
 /*
@@ -35,27 +41,33 @@ State::State (const std::vector <std::string> &column)
 	_size=0;
 	compressed=false;
 }*/
+
 const std::string State::get_file_name(void) const {return this->file_name;}
 const std::string State::get_table_name(void) const {return this->table_name;}
 
 State::State(const std::vector <std::string> &column_names)
 {
 	transposed_=false;
-	//std::cerr << __FILE__ << ", " << __LINE__ << "const std::vector <std::string> &column_names called" << std::endl;
 	if (column_names.size()==3) 
 	{
+		std::cerr << "Not streaming " << std::endl;
+
 		uint32_t sample_size=atoi(split(column_names[0], ':')[1].c_str() );
 		uint32_t sites_size=atoi(split(column_names[1], ':')[1].c_str() );
 		uint32_t buffer_size=atoi(split(column_names[2], ':')[1].c_str() );
 
-		//std::cerr << sample_size << ", " << sites_size << ", " << buffer_size << std::endl;
-	
+		std::cerr << "Genome size " << column_names[1] << std::endl;
+
 		size_=sample_size;
 		sites_=sites_size;
+		std::cerr << "setting genome size " << sites_ << std::endl;
 		cached_sites_=sites_size;
-		cached_=true;
 
-		lz4_buffer_size_=LZ4_BUFFER_SIZE;
+		masked_=MASKED;
+		cached_=true;
+		streaming_=false;
+
+		lz4_buffer_size_=buffer_size;//LZ4_BUFFER_SIZE;
 
 		lz4_start_ = new char [lz4_buffer_size_];
 		lz4_ptr_=lz4_start_;
@@ -64,53 +76,80 @@ State::State(const std::vector <std::string> &column_names)
 		block_size_=sizeof(uint32_t)*size_;
 
 		temp_lz4_ptr_=lz4_ptr_;
-	}
+	} else if (column_names.size()==2) {
+		std::cerr << "Streaming " << std::endl;
+		uint32_t sample_size=atoi(split(column_names[0], ':')[1].c_str() );
+
+		size_=sample_size;
+
+		masked_=MASKED;
+		cached_=false;
+		streaming_=true;
+
+		lz4_buffer_size_=LZ4_BUFFER_SIZE;
+
+		lz4_start_ = new char [lz4_buffer_size_];
+		lz4_ptr_=lz4_start_;
+		lz4_last_ = lz4_start_;
+		lz4_end_ = lz4_start_ + lz4_buffer_size_;
+		block_size_=sizeof(uint32_t)*size_;
+
+		temp_lz4_ptr_=lz4_ptr_;
+	} 
 	k_=0;
 }
 
 State::State(const uint32_t &sample_size, const uint32_t &sites_size, const uint32_t &buffer_size)
 {
 	transposed_=false;
-	//std::cerr << __FILE__ << ", " << __LINE__ << " t uint32_t &sample_size, const uint32_t &sites_size, const uint32_t &buffer_size" << std::endl;
-	lz4_buffer_size_=LZ4_BUFFER_SIZE;
+	cached_=true;
+	streaming_=false;
+	masked_=MASKED;
+
+	lz4_buffer_size_=buffer_size;//LZ4_BUFFER_SIZE;
 	lz4_start_ = new char [lz4_buffer_size_];
+	//std::cerr << "lz4_start_ = " << std::hex << size_t(lz4_start_) << std::endl;
 	lz4_ptr_=lz4_start_;
 	lz4_last_ = lz4_start_ + buffer_size;
-	lz4_end_ = lz4_start_ + lz4_buffer_size_;
+	lz4_end_ = lz4_start_ + buffer_size;
 	temp_lz4_ptr_=lz4_ptr_;
 
 	size_=sample_size;
 	sites_=sites_size;
+	std::cerr << __LINE__ << " set : " << sites_ << std::endl;
 	cached_sites_=sites_size;
 	block_size_=sizeof(uint32_t)*size_;
-	cached_=true;
+
 	k_=0;
 }
 
 State::State(const uint32_t &sample_size)
 {
 	transposed_=false;
-	//std::cerr << __FILE__ << ", " << __LINE__ << " const uint32_t &sample_size:" << size_t(this) << std::endl;
+	masked_=MASKED;
+	cached_=false;
+	streaming_=false;
+
 	size_=sample_size;
 	sites_=0;
-	cached_=false;
 	cached_sites_=0;
 	lz4_buffer_size_=LZ4_BUFFER_SIZE;
-	temp_lz4_ptr_=lz4_ptr_;
 
 	lz4_start_ = new char [lz4_buffer_size_];
+	//std::cerr << "lz4_start_ = " << std::hex << size_t(lz4_start_) << std::endl;
 	lz4_ptr_=lz4_start_;
 	lz4_last_ = lz4_start_;
 	lz4_end_ = lz4_start_ + lz4_buffer_size_;
 	block_size_=sizeof(uint32_t)*size_;
+	temp_lz4_ptr_=lz4_ptr_;
 	k_=0;
 }
 
 State::~State()
 {
 	if (lz4_start_){
+		//std::cerr << "Death to " << size_t(lz4_start_) << std::endl;
 		clear();
-		//std::cerr << "deleting " << size_t(lz4_start_) << std::endl;
 		delete [] lz4_start_;
 		lz4_start_=NULL;
 	}
@@ -121,33 +160,31 @@ void
 State::uncompress_inplace (uint32_t *a, uint32_t *b)
 {
 	temp_lz4_ptr_=lz4_ptr_;
-
-/*	if (!cached_)
-	{
-		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from uncached stream. Exiting.\n"), __FILE__, __LINE__);
-		exit(LZ4);
-	}*/
-
 	if (sites_) 
 	{
-		int ret;
-		//std::cerr << (long int)(lz4_end_-lz4_ptr_) << ", " << (long int)(lz4_ptr_-lz4_start_) << ", " << (long int)(lz4_last_-lz4_ptr_) << ", " << (long int)(lz4_end_) << std::endl;
-		ret=LZ4_decompress_fast (temp_lz4_ptr_, (char *)a, block_size_);
-		if (ret > 0)
+		uncompress_(temp_lz4_ptr_, a, b);
+		if(masked_) uncompress_(temp_lz4_ptr_);
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+}
+
+void 
+State::uncompress_inplace (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
+{
+	temp_lz4_ptr_=lz4_ptr_;
+	if (sites_) 
+	{
+		uncompress_(temp_lz4_ptr_, a, b);
+		if(masked_) 
 		{
-			temp_lz4_ptr_+=ret;
+			uncompress_(temp_lz4_ptr_, c, d);
 		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
+			memset( (char *)c, 0xff, sizeof(uint32_t)*size_); 
+			memset( (char *)d, 0xff, sizeof(uint32_t)*size_); 
 		}
-		ret=LZ4_decompress_fast (temp_lz4_ptr_, (char *)b, block_size_);	
-		if (ret > 0)
-		{
-			temp_lz4_ptr_+=ret;
-		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
-		}
+
 	} else {
 		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
 		exit(LZ4);
@@ -165,29 +202,40 @@ State::uncompress (uint32_t *a, uint32_t *b)
 	}
 	if (sites_-- ) 
 	{
-		int ret;
-		//std::cerr << (long int)(lz4_end_-lz4_ptr_) << ", " << (long int)(lz4_ptr_-lz4_start_) << ", " << (long int)(lz4_last_-lz4_ptr_) << ", " << (long int)(lz4_end_) << std::endl;
-		ret=LZ4_decompress_fast (lz4_ptr_, (char *)a, block_size_);
-		if (ret > 0)
+		uncompress_(lz4_ptr_, a, b);
+		if (masked_) uncompress_(lz4_ptr_);
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+}
+
+void 
+State::uncompress (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
+{
+	if (!cached_)
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from uncached stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	if (sites_-- ) 
+	{
+		uncompress_(lz4_ptr_, a, b);
+		if (masked_)
 		{
-			lz4_ptr_+=ret;
-		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
+			uncompress_(lz4_ptr_, c, d);
 		}
-		ret=LZ4_decompress_fast (lz4_ptr_, (char *)b, block_size_);	
-		if (ret > 0)
-		{
-			lz4_ptr_+=ret;
-		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
+		else {
+			memset( (char *)c, 0xff, sizeof(uint32_t)*size_); 
+			memset( (char *)d, 0xff, sizeof(uint32_t)*size_); 
 		}
 	} else {
 		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
 		exit(LZ4);
 	}
 }
+
+#ifdef SSE_TRANS
 
 //hackers_delight_transpose
 
@@ -312,10 +360,10 @@ void transpose32c(const uint32_t A[32], uint32_t B[32]) {
 void
 fast_trans(uint32_t const *A, uint32_t *B, int nrows, int ncols)
 {
-//	assert(nrows % 32 == 0 && ncols == 32)
 	for (size_t x=0; x<nrows; x+=32)
 		transpose32c(A+x, B+x);
 }
+
 
 //mischasan sse_transpose. 
 
@@ -390,6 +438,37 @@ State::transpose()
 	cache();	
 }
 
+#endif
+
+void 
+State::uncompress_(char *&ptr, uint32_t *&a, uint32_t *&b) const
+{
+	int ret=LZ4_decompress_fast (ptr, (char *)a, block_size_);
+	if (ret > 0)
+	{
+		ptr+=ret;
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	ret=LZ4_decompress_fast (ptr, (char *)b, block_size_);	
+	if (ret > 0)
+	{
+		ptr+=ret;
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+}
+
+void 
+State::uncompress_(char * &ptr ) const
+{
+	uint32_t *temp=new uint32_t[size_];
+	uncompress_(ptr, temp, temp);
+	delete [] temp;
+}
+
 void 
 State::uncompress (uint32_t *a, uint32_t *b, State_stream &stream) const
 {
@@ -400,64 +479,143 @@ State::uncompress (uint32_t *a, uint32_t *b, State_stream &stream) const
 	}
 	if (stream.sites_-- ) 
 	{
-		int ret;
-		//std::cerr << (long int)(lz4_end_-lz4_ptr_) << ", " << (long int)(lz4_ptr_-lz4_start_) << ", " << (long int)(lz4_last_-lz4_ptr_) << ", " << (long int)(lz4_end_) << std::endl;
-		ret=LZ4_decompress_fast (stream.lz4_ptr, (char *)a, block_size_);
-		if (ret > 0)
-		{
-			stream.lz4_ptr+=ret;
-		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
-		}
-		ret=LZ4_decompress_fast (stream.lz4_ptr, (char *)b, block_size_);	
-		if (ret > 0)
-		{
-			stream.lz4_ptr+=ret;
-		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
+		uncompress_(stream.lz4_ptr, a, b);
+		if(masked_) uncompress_(stream.lz4_ptr);
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+
+	}
+}
+
+void 
+State::uncompress (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, State_stream &stream) const
+{
+	if (!cached_)
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from uncached stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	if (stream.sites_-- ) 
+	{
+		uncompress_(stream.lz4_ptr, a, b);
+		if(masked_) uncompress_(stream.lz4_ptr, c, d);
+		else {
+			memset((char *)c, 0xff, sizeof(uint32_t)*size_ );
+			memset((char *)d, 0xff, sizeof(uint32_t)*size_ );
 		}
 	} else {
 		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
 		exit(LZ4);
+
 	}
 }
 
 void 
 State::uncompress (uint32_t *a, uint32_t *b, const uint32_t &k)
 {
-	//std::cerr << "started at " << cached_sites_-sites_ << std::endl;
-	if ( k < cached_sites_-sites_) rewind();
-	while (cached_sites_-sites_ <= k) 
+	if ( k < cached_sites_-sites_) 
 	{
-	//	std::cerr << "uncompressed " << cached_sites_-sites_ << std::endl;
+		std::cerr << "rewind...\n";
+		rewind();
+	}
+	
+	while (cached_sites_-sites_ < k) 
+	{
 		if (sites_==0) {
 			fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
 			exit(LZ4);
 		}
-		int ret=LZ4_decompress_fast (lz4_ptr_, (char *)a, block_size_);
-
-		if (ret > 0)
-		{
-			lz4_ptr_+=ret;
-		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
-		}
-		ret=LZ4_decompress_fast (lz4_ptr_, (char *)b, block_size_);
-
-		if (ret > 0)
-		{
-			lz4_ptr_+=ret;
-		} else {
-			fprintf(stderr, gettext("mapgd:%s:%d: Malformed LZ4 block. Exiting.\n"), __FILE__, __LINE__);
-			exit(LZ4);
-		}
-
+		uncompress_(lz4_ptr_, a, b);
+		if(masked_) uncompress_(lz4_ptr_);
 		sites_--;
-	} 
-	//std::cerr << "finished at " << cached_sites_-sites_ << std::endl;
+	}
+
+	if (cached_sites_-sites_ == k) 
+	{
+		temp_lz4_ptr_=lz4_ptr_;
+		if (sites_==0) {
+			fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+			exit(LZ4);
+		}
+		uncompress_(temp_lz4_ptr_, a, b);
+		if(masked_) uncompress_(temp_lz4_ptr_);
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: WTF?\n"), __FILE__, __LINE__);
+	}
+}
+
+void 
+State::uncompress (uint32_t *a, uint32_t *b, const uint32_t &k, State_stream &stream) const
+{
+	std::cerr << stream.cached_sites_ << " _ " << stream.sites_ << std::endl;
+	if ( k < stream.cached_sites_-stream.sites_) 
+	{
+		std::cerr << "rewind...\n";
+		rewind(stream);
+	}
+	
+	while (stream.cached_sites_-stream.sites_ < k) 
+	{
+		if (sites_==0) {
+			fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+			exit(LZ4);
+		}
+		uncompress_(stream.lz4_ptr, a, b);
+		if(masked_) uncompress_(stream.lz4_ptr);
+		stream.sites_--;
+	}
+
+	if (stream.cached_sites_-stream.sites_ == k) 
+	{
+		if (stream.sites_==0) {
+			fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+			exit(LZ4);
+		}
+		uncompress_(stream.lz4_ptr, a, b);
+		if(masked_) uncompress_(stream.lz4_ptr);
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: WTF?\n"), __FILE__, __LINE__);
+	}
+}
+
+void 
+State::uncompress (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, const uint32_t &k)
+{
+	if ( k < cached_sites_-sites_) rewind();
+	while (cached_sites_-sites_ < k) 
+	{
+		if (sites_==0) {
+			fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+			exit(LZ4);
+		}
+		temp_lz4_ptr_=lz4_ptr_;
+		uncompress_(temp_lz4_ptr_, a, b);
+		if (masked_) uncompress_(temp_lz4_ptr_, c, d);
+		else 
+		{
+			memset((char *)c, 0xff, sizeof(uint32_t)*size_ );
+			memset((char *)d, 0xff, sizeof(uint32_t)*size_ );
+		}
+		sites_--;
+	}
+	if (cached_sites_-sites_ == k) 
+	{
+		if (sites_==0) {
+			fprintf(stderr, gettext("mapgd:%s:%d: Attempt to read from empty stream. Exiting.\n"), __FILE__, __LINE__);
+			exit(LZ4);
+		}
+		temp_lz4_ptr_=lz4_ptr_;
+		uncompress_(temp_lz4_ptr_, a, b);
+		if (masked_) uncompress_(temp_lz4_ptr_, c, d);
+		else 
+		{
+			memset((char *)c, 0xff, sizeof(uint32_t)*size_ );
+			memset((char *)d, 0xff, sizeof(uint32_t)*size_ );
+		}
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: WTF?\n"), __FILE__, __LINE__);
+	}
 }
 
 void 
@@ -479,6 +637,7 @@ State::rewind(void)
 	{
 		lz4_ptr_=lz4_start_;
 		cached_=true;
+		std::cerr << __LINE__ << " Beware rewind : " << sites_ << std::endl;
 		sites_=cached_sites_;
 	} else {
 		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to rewind uncached stream. Exiting.\n"), __FILE__, __LINE__);
@@ -486,17 +645,43 @@ State::rewind(void)
 	}
 }
 
+void
+State::rewind(State_stream &stream) const
+{
+	if (cached_)
+	{
+		stream.lz4_ptr=lz4_start_;
+		std::cerr << __LINE__ << " Beware rewind : " << sites_ << std::endl;
+		stream.sites_=cached_sites_;
+	} else {
+		fprintf(stderr, gettext("mapgd:%s:%d: Attempt to rewind uncached stream. Exiting.\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+}
+
+
 void 
 State::increase_buffer_(void)
 {
 	char *new_lz4=new char[lz4_buffer_size_+LZ4_BUFFER_SIZE];
+	std::cerr << "allocating " << lz4_buffer_size_+LZ4_BUFFER_SIZE << " at "  << size_t(new_lz4) << std::endl;
+	if (!new_lz4) 
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d: Failed to allocate memory. Mother fucker. Exiting.\n"), __FILE__, __LINE__);
+	}
 	memcpy(new_lz4, lz4_start_, lz4_buffer_size_);
 	lz4_buffer_size_+=LZ4_BUFFER_SIZE;
+	/*std::cerr << size_t (lz4_ptr_-lz4_start_) << std::endl;
+	std::cerr << size_t (lz4_last_-lz4_start_) << std::endl;
+	std::cerr << size_t (lz4_buffer_size_) << std::endl;
+	*/
 	lz4_ptr_=new_lz4+(lz4_ptr_-lz4_start_);
 	lz4_last_=new_lz4+(lz4_last_-lz4_start_);
 	lz4_end_=new_lz4+lz4_buffer_size_;
 	delete [] lz4_start_;
 	lz4_start_=new_lz4;
+	//std::cerr << size_t(lz4_end_-lz4_start_) << '\t' << size_t(lz4_ptr_-lz4_start_) << std::endl;
+	//std::cerr << size_t(lz4_end_-lz4_ptr_) << '\t' << size_t() << std::endl;
 }
 
 void
@@ -508,61 +693,108 @@ State::advance(void)
 	cached_=false;
 }
 
+void
+State::finalize(void)
+{
+	lz4_ptr_=temp_lz4_ptr_;
+	k_=0; //? Do I really want to do this?
+	cached_=false;
+}
+
+//COMPRESS?
+
+void
+State::compress_(char *&ptr, char *&end, const uint32_t *a, const uint32_t *b) const
+{
+	int size=LZ4_compress_default( (const char*) a, ptr, block_size_,  size_t (end-ptr) > INT_MAX ? INT_MAX : size_t (end-ptr) );
+	if (size==0) 
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	ptr+=size;
+	size=LZ4_compress_default( (const char*) b, ptr, block_size_,  size_t (end-ptr) > INT_MAX ? INT_MAX : size_t (end-ptr) );
+	if (size==0) 
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	ptr+=size;
+	/*
+	if (end==ptr)
+	{
+		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
+		exit(LZ4);
+	}
+	*/
+}
+
+void
+State::compress_(char *&ptr, char *&end) const
+{
+	char * a=new char [block_size_];
+	memset(a, 0xff, block_size_);
+	compress_(ptr, end, (uint32_t *)a, (uint32_t *)a);
+	delete [] a;
+}
+void 
+State::compress_inplace (const uint32_t *a, const uint32_t *b, const uint32_t *c, const uint32_t *d)
+{
+	if (lz4_end_-lz4_ptr_ < 2*block_size_ ) {
+		std::cerr << __LINE__ << " compressing in place is increasing buffer...\n";
+		increase_buffer_();
+	}
+
+	temp_lz4_ptr_=lz4_ptr_;
+	compress_(temp_lz4_ptr_, lz4_end_, a, b);
+	if(masked_) compress_(temp_lz4_ptr_, lz4_end_, c, d);
+}
+
 void 
 State::compress_inplace (const uint32_t *a, const uint32_t *b)
 {
-	if (lz4_end_-lz4_ptr_ < 2*block_size_ ) increase_buffer_();
+	if (lz4_end_-lz4_ptr_ < 2*block_size_ ) 
+	{
+		std::cerr << __LINE__ << " compress in place is increasing buffer...\n";
+		increase_buffer_();
+	}
 
 	temp_lz4_ptr_=lz4_ptr_;
-	int size;
-
-	size=LZ4_compress_default( (const char*) a, temp_lz4_ptr_, block_size_,  size_t (lz4_end_-temp_lz4_ptr_) > INT_MAX ? INT_MAX : size_t (lz4_end_-temp_lz4_ptr_) );
-	if (size==0) 
-	{
-		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
-		exit(LZ4);
-	}
-	temp_lz4_ptr_+=size;
-	size=LZ4_compress_default( (const char*) b, temp_lz4_ptr_, block_size_,  size_t (lz4_end_-temp_lz4_ptr_) > INT_MAX ? INT_MAX : size_t (lz4_end_-temp_lz4_ptr_) );
-	if (size==0) 
-	{
-		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
-		exit(LZ4);
-	}
-	temp_lz4_ptr_+=size;
-	if (lz4_end_==temp_lz4_ptr_)
-	{
-		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
-		exit(LZ4);
-	}
+	compress_(temp_lz4_ptr_, lz4_end_, a, b);
+	if(masked_) compress_(temp_lz4_ptr_, lz4_end_);
 }
+
+void 
+State::compress (const uint32_t *a, const uint32_t *b, const uint32_t *c, const uint32_t *d)
+{
+	if (lz4_end_-lz4_ptr_ < 2*block_size_ ) 
+	{
+		std::cerr << __LINE__ << " compress is increasing buffer...\n";
+		increase_buffer_();
+	}
+
+	compress_(lz4_ptr_, lz4_end_, a, b);
+	if(masked_) compress_(lz4_ptr_, lz4_end_, c, d);
+
+	++sites_;
+	cached_=false;
+}
+
 void 
 State::compress (const uint32_t *a, const uint32_t *b)
 {
-	int size;
-	if (lz4_end_-lz4_ptr_ < 2*block_size_ ) increase_buffer_();
+	if (lz4_end_-lz4_ptr_ < 2*block_size_ ) 
+	{
+		
+		std::cerr << __LINE__ << " compress is increasing buffer because " << size_t (lz4_ptr_) << " is "  << size_t(lz4_end_-lz4_ptr_) << '\t' << 2*block_size_ << std::endl;
+		increase_buffer_();
+	}
 
-	size=LZ4_compress_default( (const char*) a, lz4_ptr_, block_size_,  size_t (lz4_end_-lz4_ptr_) > INT_MAX ? INT_MAX : size_t (lz4_end_-lz4_ptr_) );
-	if (size==0) 
-	{
-		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
-		exit(LZ4);
-	}
-	lz4_ptr_+=size;
-	size=LZ4_compress_default( (const char*) b, lz4_ptr_, block_size_,  size_t (lz4_end_-lz4_ptr_) > INT_MAX ? INT_MAX : size_t (lz4_end_-lz4_ptr_) );
-	if (size==0) 
-	{
-		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
-		exit(LZ4);
-	}
-	lz4_ptr_+=size;
+	compress_(lz4_ptr_, lz4_end_, a, b);
+	if(masked_) compress_(lz4_ptr_, lz4_end_);
+
 	++sites_;
 	cached_=false;
-	if (lz4_end_==lz4_ptr_)
-	{
-		fprintf(stderr, gettext("mapgd:%s:%d:FLAGRANT SYSTEM ERROR. Computer over. lz4buffer = Full. (Write me an e-mail!)\n"), __FILE__, __LINE__);
-		exit(LZ4);
-	}
 }
 
 
@@ -584,49 +816,108 @@ static uint32_t mask[32]={0x00000001,	0x00000002,	0x00000004,	0x00000008,
 					0x00100000,	0x00200000,	0x00400000,	0x00800000,
 					0x01000000,	0x02000000,	0x04000000, 	0x08000000,	
 					0x10000000, 	0x20000000, 	0x40000000, 	0x80000000};
+size_t
+State::buffer_size(void) const
+{
+	if (cached_)
+		return (lz4_last_-lz4_start_);
+	else 
+		return (lz4_ptr_-lz4_start_);
+}
+
 void 
 State::write (std::ostream& out) const 
 {
 	uint32_t *set0=new uint32_t[size_];
 	uint32_t *set1=new uint32_t[size_];
 
+	uint32_t *msk0=new uint32_t[size_];
+	uint32_t *msk1=new uint32_t[size_];
+
 	State_stream stream;
 	set_stream(stream);
 
+	if (transposed_)
+	{
+	} else {
+		while (stream.sites_>0)
+		{
+			//std::cerr << "uncompressing : " << stream.sites_ << ", " << lz4_last_-stream.lz4_ptr << "\n";
+			uncompress(set0, set1, msk0, msk1, stream);
+			//std::cerr << "writing ...\n";
+			for (size_t b=0; b<32; ++b) 
+			{
+				int c=0;
+				for (size_t y=0; y<size_; ++y)
+				{
+					out << std::string(c, '\t');
+					if( (msk0[y] & mask[b] ) >> b )
+						out << ( ( set0[y] & mask[b] ) >> b );
+					else
+						out << ".";
+					if( (msk1[y] & mask[b]) >> b )
+						out << ( ( set1[y] & mask[b] ) >> b );
+					else
+						out << ".";
+					c=1;
+				}
+				if (stream.sites_!=0 || b!=31) out << std::endl;
+			}
+			//std::cerr << "done.\n";
+		}
+	}
+	delete [] set0;
+	delete [] set1;
+}
+
+/*
+void 
+State::write (std::ostream& out) const 
+{
+	uint32_t *set0=new uint32_t[size_];
+	uint32_t *set1=new uint32_t[size_];
+
+	uint32_t *set2=new uint32_t[size_];
+	uint32_t *set3=new uint32_t[size_];
+
+//	memset((char *)set2, 0xff, sizeof(uint32_t)*size_ );
+//	memset((char *)set3, 0xff, sizeof(uint32_t)*size_ );
+
+	State_stream stream;
+	set_stream(stream);
+
+	char o[]="o1i0";
 	//std::cerr << "here:" << stream.sites_ << std::endl;
 	if (transposed_)
 	{
 	} else {
 		while (stream.sites_>0)
 		{
-			uncompress(set0, set1, stream);
+			if(masked_) uncompress(set0, set1, set2, set3, stream);
+			else uncompress(set0, set1, stream);
 			for (size_t b=0; b<32; ++b) 
 			{
+				int c=0;
 				for (size_t y=0; y<size_; ++y)
 				{
-					if (set0[y] & mask[b]) {
-						if ( (set1[y] & mask[b] ) ) 
-						{
-							out << "	1	1";
-							} else {
-							out << "	1	0";
-						}
-					} else {
-						if ( (set1[y] & mask[b]) )
-						{
-							out << "	0	1";
-						} else {
-							out << "	0	0";
-							}
-					}
+					short d=(set0[y] & mask[b] >> b) << 1;
+					short e=(set1[y] & mask[b] >> b) << 1;
+					short f=(set2[y] & mask[b] >> b);
+					short g=(set3[y] & mask[b] >> b);
+					//std::cerr << d << ", " << e << ", " << f << ", " << g << std::endl;
+					out << std::string(c, '\t') << o[d+f] << o[e+g];
+					c=1;
 				}
-				out << std::endl;
+				if (stream.sites_!=0 || b!=31) out << std::endl;
 			}
 		}
 	}
 	delete [] set0;
 	delete [] set1;
-}
+
+	delete [] set2;
+	delete [] set3;
+}*/
 	
 double 
 State::compression_ratio (void) const
@@ -644,52 +935,96 @@ State::read (std::istream& in)
 	uint32_t *set0=new uint32_t[size_];
 	uint32_t *set1=new uint32_t[size_];
 
-	uint32_t w, z, sites=sites_;
-	//std::cerr << "Sites:" << sites_ << std::endl;
+	uint32_t *set2=new uint32_t[size_];
+	uint32_t *set3=new uint32_t[size_];
+
+	char w[2], z[2]; 
+	uint32_t sites=sites_;
+
 	clear();
-	for (size_t x=0; x<sites; ++x)
+
+	//if (streaming_) sites=1000;
+
+	//for (size_t x=0; x<sites; ++x)
+	while ( in.peek() != EOF )
 	{
 		memset(set0, 0, sizeof(uint32_t)*size_);
 		memset(set1, 0, sizeof(uint32_t)*size_);
+		memset(set2, 0xff, sizeof(uint32_t)*size_);
+		memset(set3, 0xff, sizeof(uint32_t)*size_);
+
 		for (size_t b=0; b<32; ++b) 
 		{
 			for (size_t y=0; y<size_; ++y)
 			{
-				in >> w;
-				in >> z;
-				if (w) set0[y]+=mask[b];
-				if (z) set1[y]+=mask[b];
+				if (in.peek() != EOF) {
+					in >> w;
+	
+					if (w[0]=='i' || w[0]=='1' ) set0[y]+=mask[b];
+					if (w[1]=='i' || w[1]=='1' ) set1[y]+=mask[b];
+					if (w[0]=='i' || w[0]=='l' ) set0[y]-=mask[b];
+					if (w[1]=='i' || w[1]=='l' ) set1[y]-=mask[b];
+				}
+	//			std::cerr << w << " ";	
 			}
+	//		std::cerr << std::endl;	
 		}
-		compress(set0, set1);
+	//	std::cerr << "Heyo!" << size_ << "/" << sites_ << std::endl;
+		compress(set0, set1, set2, set3);
 	}
+
 	delete [] set0;
 	delete [] set1;
+
+	delete [] set2;
+	delete [] set3;
+
 	cache();
 }
 
 std::string 
 State::header (void) const
 {
-	return "@NS:"+std::to_string(size_)+"\tGS:"+std::to_string(sites_)+"\tBS:"+std::to_string(lz4_last_-lz4_start_)+'\n';
+	if (streaming_)
+		return "@NS:"+std::to_string(size_)+"\tSTREAMING\n";
+	else
+		return "@NS:"+std::to_string(size_)+"\tGS:"+std::to_string(sites_)+"\tBS:"+std::to_string(buffer_size() )+'\n';
 }
 
 void 
 State::read_binary (std::istream& in)
 {
-	in.read(lz4_start_, lz4_last_-lz4_start_ );
-	cached_=true;
+	if (streaming_) 
+	{
+		in.read((char *)sites_, sizeof(size_t) );
+		size_t size;
+		in.read((char *)size, sizeof(size_t) );
+		lz4_last_=lz4_start_+size;
+		in.read(lz4_start_, lz4_last_-lz4_start_ );
+		cached_=true;
+	} else {
+		in.read(lz4_start_, lz4_last_-lz4_start_ );
+		cached_=true;
+	}
 }
 
 void 
 State::write_binary (std::ostream& out) const 
 {
-	out.write(lz4_start_, lz4_last_-lz4_start_ );
+	if (streaming_) 
+	{
+		out.write( (char *)&sites_, sizeof(size_t) );
+		size_t size=buffer_size();
+		out.write( (char *)&size, sizeof(size_t) );
+		out.write(lz4_start_, lz4_last_-lz4_start_ );
+	} else 
+		out.write(lz4_start_, lz4_last_-lz4_start_ );
 }
 
 
 
-State sub_sample(const State &state, const size_t &sub_sample, const uint32_t *mask) 
+State 
+sub_sample(const State &state, const size_t &sub_sample, const uint32_t *mask) 
 {
 	State ret(sub_sample);
 	State_stream stream;
@@ -700,30 +1035,135 @@ State sub_sample(const State &state, const size_t &sub_sample, const uint32_t *m
 	uint32_t *p1=new uint32_t [sub_sample];
 	uint32_t *p2=new uint32_t [sub_sample];
 
+	uint32_t *M1=new uint32_t [state.sample_size()];
+	uint32_t *M2=new uint32_t [state.sample_size()];
+	uint32_t *m1=new uint32_t [sub_sample];
+	uint32_t *m2=new uint32_t [sub_sample];
+
 	for (size_t z=0; z<state.genome_size();++z)
 	{
-		state.uncompress(P1, P2, stream);
+		state.uncompress(P1, P2, M1, M2, stream);
 		size_t i=0;
 		for (size_t x=0; x<state.sample_size(); ++x)
 		{
-			//std::cerr << x;
 			if ( mask[x >> 5] & (1 << (x & 0x1F) ) ) 
 			{
 				p1[i]=P1[x];
-				p2[i++]=P2[x];
+				p2[i]=P2[x];
+				m1[i]=M1[x];
+				m2[i++]=M2[x];
 			}
-			//std::cerr << std::endl;
 		}
-		ret.compress(p1, p2);
+		ret.compress(p1, p2, m1, m2);
 	}
+
 	delete [] P1;
 	delete [] P2;
 	delete [] p1;
 	delete [] p2;
+
+	delete [] M1;
+	delete [] M2;
+	delete [] m1;
+	delete [] m2;
+
 	ret.cache();
 	//ret.write(std::cerr);
 	return ret;
 }
+
+State
+rand_drop(const State &state, const float &prob, std::mt19937 &mt)
+{
+	size_t N=state.sample_size();
+	std::bernoulli_distribution d(prob);
+	State ret(state.sample_size() );
+	State_stream stream;
+	state.set_stream(stream);
+
+	uint32_t *P1=new uint32_t [N];
+	uint32_t *P2=new uint32_t [N];
+
+	uint32_t *M1=new uint32_t [N];
+	uint32_t *M2=new uint32_t [N];
+
+	uint32_t D1;
+
+	for (size_t z=0; z<state.genome_size();++z)
+	{
+		state.uncompress(P1, P2, M1, M2, stream);
+
+		for (size_t x=0; x<N; x++)
+		{
+			D1=0xFFFFFFFF;
+			for (size_t k=0; k<32; k++)
+			{
+				if ( d(mt) ) D1  &= ~(1UL << k);
+			}
+			P1[x]&=D1;
+			P2[x]&=D1;
+			M1[x]&=D1;
+			M2[x]&=D1;
+		}
+		ret.compress(P1, P2, M1, M2);
+	}
+
+	delete [] P1;
+	delete [] P2;
+
+	delete [] M1;
+	delete [] M2;
+
+	ret.cache();
+	return ret;
+}
+
+State
+rand_err(const State &state, const float &prob, std::mt19937 &mt)
+{
+	size_t N=state.sample_size();
+	std::bernoulli_distribution d(prob);
+	State ret(state.sample_size() );
+	State_stream stream;
+	state.set_stream(stream);
+
+	uint32_t *P1=new uint32_t [N];
+	uint32_t *P2=new uint32_t [N];
+
+	uint32_t *M1=new uint32_t [N];
+	uint32_t *M2=new uint32_t [N];
+
+	uint32_t D1, D2;
+
+	for (size_t z=0; z<state.genome_size();++z)
+	{
+		state.uncompress(P1, P2, M1, M2, stream);
+
+		for (size_t x=0; x<N; x++)
+		{
+			D1=0x0;
+			D2=0x0;
+			for (size_t k=0; k<32; k++)
+			{
+				if ( d(mt) ) D1 |= (1UL << k);
+				if ( d(mt) ) D2 |= (1UL << k);
+			}
+			P1[x]^=D1;
+			P2[x]^=D2;
+		}
+		ret.compress(P1, P2, M1, M2);
+	}
+
+	delete [] P1;
+	delete [] P2;
+
+	delete [] M1;
+	delete [] M2;
+
+	ret.cache();
+	return ret;
+}
+
 uint8_t
 State::get_k(void) const
 {
@@ -734,9 +1174,19 @@ void
 State::set_k(const uint8_t &k)
 {
 	k_=k;
-};
+}
 
-bool State::empty(void)
+bool State::empty(void) const
 {
 	return sites_==0;
+}
+
+bool State::cached(void) const
+{
+	return cached_;
+}
+
+bool State::masked(void) const
+{
+	return masked_;
 }

@@ -44,35 +44,36 @@ VD<-VD[1:n, 1:n]
 VA<-VA[1:n, 1:n]
 VG<-VG[1:n, 1:n]
 
-W<-100
+W<-50
 I<-matrix( rep(-1/(n-1), n*n), ncol=n, nrow=n)
 diag(I)<-1
 
 source("figures.conf")
 
-#pdf("h2.pdf")
-
-par(mar=MAR2, family=FONT, font.lab=2)
 
 for (w in 0:4)
 {
+pdf(paste("h2_", w,".pdf", sep="") )
+
+par(mar=MAR2, family=FONT, font.lab=2)
 
 e<-mvrnorm(1, rep(0, n), I)
 
 z<-alpha+delta
 VARZ<-var(z)
 
-z<-z+e*2^w*VARZ
+z<-z+e*2^w*VARZ/8
 
 h<-var(alpha)/var(z)
 H<-var(alpha+delta)/var(z)
+covofandd<-cov(alpha,delta)/var(z)
 
 z<-z-mean(z)
 z<-z/sd(z)
 
 l<-matrix( rep(NA, W*W), ncol=W, nrow=W)
 
-message(H, ": ", h)
+message(H, ": ", h, ":", covofandd)
 
 for (x in 1:W){
 	for (y in 1:(W-x+1) ) {
@@ -81,7 +82,7 @@ for (x in 1:W){
 			q<-y/101
 #			r<-g/101
 			s<-1-p-q
-#			l[x,y+x-1]<-max(l[x,y+x-1], dmvnorm_reduce(z, p*VA+q*VD+s*I, n-1), na.rm=TRUE)
+			l[x,y+x-1]<-max(l[x,y+x-1], dmvnorm_reduce(z, p*VA+q*VD+s*I, n-1), na.rm=TRUE)
 		#	message(p," " ,q," " ,r," " ,s," " ,l[x,y+x-1])
 		}
 	}
@@ -91,8 +92,8 @@ lmax<-max(l, na.rm=TRUE)
 q<-l
 q[abs(q)>abs(lmax)+3.8*2]<-NA
 
-#plot(0,pch='', ylim=c(0, 1), xlim=c(0,1) ,ylab=expression(H^2), xlab=expression(h^2), main=H, cex.lab=LABSIZE, cex.axis=AXISSIZE)
-#image(q, add=TRUE)
-#points(h, H, pch=20)
+plot(0,pch='', ylim=c(0, 1), xlim=c(0,1) ,ylab=expression(H^2), xlab=expression(h^2), main=H, cex.lab=LABSIZE, cex.axis=AXISSIZE)
+image(q, add=TRUE)
+points(h, H, pch=20)
+dev.off()
 }
-#dev.off()

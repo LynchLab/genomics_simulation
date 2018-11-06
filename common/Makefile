@@ -8,7 +8,7 @@ STD=-std=c++11
 WARNINGS=-Wall -Werror=return-type -Wno-write-strings
 VERSION=-D VERSION=\"0.0\"
 CXX=g++
-INCLUDE=-I ./include -I ~/src/lz4/lib -L ~/src/lz4/lib
+INCLUDE=-I ./include -I ~/src/lz4/lib -L ~/src/lz4/lib  -I ~/src/eigen-eigen-5a0156e40feb
 CXXFLAGS=$(VERSION) $(MODE) $(STD) $(WARNINGS)  -pedantic $(INCLUDE) -fopenmp -fpic -llz4
 
 OBJDIR=obj
@@ -34,8 +34,7 @@ MAIN=mutate.o
 #Depend on db_api
 TARGET=libmapgd.so
 
-OBJ=obj/interface.o obj/stream_tools.o obj/fasta.o obj/sample_name.o obj/map_file.o obj/data.o obj/tmp_buffer.o obj/file_index.o obj/relatedness_data.o obj/state.o obj/correl_data.o
-
+OBJ=obj/interface.o obj/stream_tools.o obj/fasta.o obj/sample_name.o obj/map_file.o obj/data.o obj/tmp_buffer.o obj/file_index.o obj/relatedness_data.o obj/state.o obj/correl_data.o obj/phenotype.o obj/system.o obj/matrix.o obj/real.o
 #all: $(OBJ)
 #	$(CXX) -c $(OBJ) $(CXXFLAGS) 
 
@@ -46,10 +45,6 @@ obj/%.o: %.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $< $(INCLUDE)
 
 clean:
-	rm -f *.o
-	for DIR in $(SUBDIR); do \
-		cd $$DIR; \
-		rm -f *.o; \
-		cd ..; \
-	done
+	rm -f $(OBJDIR)/*.o
+	rm -f libmapgd.so
 .PHONY: clean

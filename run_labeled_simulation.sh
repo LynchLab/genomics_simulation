@@ -6,11 +6,18 @@ echo "simulating population"
 cd sequences
 #../population_simulation/non_pedigree_sim $POPULATION $SNPS t 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
 #../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 0.002 0.002 s b 1 0.5 2> var | cut -d '	' -f 1-$((2*SAMPLE+1)) > states.txt
-../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 50 0.01 g t 2> var | cut -d '	' -f 1$SAMPLE_CHRM > states.txt
+
+pedigree_sim -y g -f $F -N $POPULATION -1 $POPULATION -s 50 -g $TIME -plnGt -k $TIME -v $V -e 0.005 -t > states.txt 
+
+#../population_simulation/pedigree_sim $POPULATION $TIME $SNPS 50 0.01 g t 2> var | cut -d '	' -f 1$SAMPLE_CHRM > states.txt
+
 head -2 name-file.txt > temp-file.txt
 head -3 name-file.txt | tail -n 1 | cut -d '	' -f 1$SAMPLE_NAME >> temp-file.txt
+
 tail -n 1 name-file.txt >> temp-file.txt
+
 mv temp-file.txt name-file.txt
+
 rm -rf pedigree.txt.gz
 	gzip pedigree.txt
 cd ..
